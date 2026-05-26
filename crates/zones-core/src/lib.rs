@@ -1,6 +1,7 @@
 use rgraph_core::{assignment_label_connected, undirected_edge_cut, EdgeCutError};
 use rplan_core::RplanContext;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
 
@@ -1080,6 +1081,45 @@ pub struct ZonePlanInput {
     pub caveats: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GeometryJoinOptions {
+    pub unit_id_property: String,
+    pub require_all_units: bool,
+}
+
+impl Default for GeometryJoinOptions {
+    fn default() -> Self {
+        Self {
+            unit_id_property: "unit_id".to_string(),
+            require_all_units: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GeometryJoinReport {
+    pub matched_unit_count: usize,
+    pub unmatched_unit_ids: Vec<String>,
+    pub unused_feature_unit_ids: Vec<String>,
+    pub input: ZonePlanInput,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+struct GeoJsonFeatureCollection {
+    #[serde(rename = "type")]
+    kind: String,
+    features: Vec<GeoJsonFeature>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+struct GeoJsonFeature {
+    #[serde(default)]
+    id: Option<Value>,
+    #[serde(default)]
+    properties: BTreeMap<String, Value>,
+    geometry: Option<MapGeometry>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZonePlanReport {
     pub plan_name: String,
@@ -1326,6 +1366,22 @@ pub enum ZonePlanError {
     },
 }
 
+#[derive(Debug, Error, PartialEq)]
+pub enum GeometryJoinError {
+    #[error("failed to parse GeoJSON: {0}")]
+    Parse(String),
+    #[error("GeoJSON root type must be FeatureCollection, found {kind}")]
+    InvalidRootType { kind: String },
+    #[error("GeoJSON feature for unit {unit_id} has no geometry")]
+    MissingGeometry { unit_id: String },
+    #[error("GeoJSON has duplicate feature for unit {unit_id}")]
+    DuplicateFeatureUnitId { unit_id: String },
+    #[error("plan input validation failed after geometry join: {0}")]
+    InvalidPlan(#[from] ZonePlanError),
+    #[error("GeoJSON did not provide geometries for required units: {unit_ids:?}")]
+    MissingRequiredUnits { unit_ids: Vec<String> },
+}
+
 pub fn evaluate_zone_plan(
     units: &[BoundaryUnit],
     adjacency: &[Vec<usize>],
@@ -1385,6 +1441,88 @@ pub fn evaluate_zone_plan_input(input: &ZonePlanInput) -> Result<ZonePlanReport,
         &input.plan,
         &input.reference_assignment,
     )
+}
+
+pub fn attach_geojson_geometries(
+    input: &ZonePlanInput,
+    geojson: &str,
+    options: &GeometryJoinOptions,
+) -> Result<GeometryJoinReport, GeometryJoinError> {
+    let collection: GeoJsonFeatureCollection =
+        serde_json::from_str(geojson).map_err(|err| GeometryJoinError::Parse(err.to_string()))?;
+    if collection.kind != "FeatureCollection" {
+        return Err(GeometryJoinError::InvalidRootType {
+            kind: collection.kind,
+        });
+    }
+
+    let mut geometries_by_unit_id = BTreeMap::new();
+    for feature in collection.features {
+        if let Some(unit_id) = geojson_feature_unit_id(&feature, &options.unit_id_property) {
+            let geometry = feature
+                .geometry
+                .ok_or_else(|| GeometryJoinError::MissingGeometry {
+                    unit_id: unit_id.clone(),
+                })?;
+            if geometries_by_unit_id
+                .insert(unit_id.clone(), geometry)
+                .is_some()
+            {
+                return Err(GeometryJoinError::DuplicateFeatureUnitId { unit_id });
+            }
+        }
+    }
+
+    let mut joined = input.clone();
+    let unit_ids = joined
+        .units
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect::<BTreeSet<_>>();
+    let mut matched_unit_count = 0;
+    let mut unmatched_unit_ids = Vec::new();
+    for unit in &mut joined.units {
+        if let Some(geometry) = geometries_by_unit_id.remove(&unit.id) {
+            unit.map_geometry = Some(geometry);
+            matched_unit_count += 1;
+        } else {
+            unmatched_unit_ids.push(unit.id.clone());
+        }
+    }
+
+    if options.require_all_units && !unmatched_unit_ids.is_empty() {
+        return Err(GeometryJoinError::MissingRequiredUnits {
+            unit_ids: unmatched_unit_ids,
+        });
+    }
+
+    evaluate_zone_plan_input(&joined)?;
+    let unused_feature_unit_ids = geometries_by_unit_id
+        .into_keys()
+        .filter(|unit_id| !unit_ids.contains(unit_id))
+        .collect();
+    Ok(GeometryJoinReport {
+        matched_unit_count,
+        unmatched_unit_ids,
+        unused_feature_unit_ids,
+        input: joined,
+    })
+}
+
+fn geojson_feature_unit_id(feature: &GeoJsonFeature, unit_id_property: &str) -> Option<String> {
+    feature
+        .properties
+        .get(unit_id_property)
+        .and_then(geojson_id_value)
+        .or_else(|| feature.id.as_ref().and_then(geojson_id_value))
+}
+
+fn geojson_id_value(value: &Value) -> Option<String> {
+    match value {
+        Value::String(value) if !value.is_empty() => Some(value.clone()),
+        Value::Number(value) => Some(value.to_string()),
+        _ => None,
+    }
 }
 
 pub fn evaluate_zone_plan_input_with_manifest(
@@ -3186,6 +3324,55 @@ mod tests {
         assert!(geojson.contains("\"type\":\"Polygon\""));
         assert!(geojson.contains("geometry from plan input"));
         assert!(geojson.contains("[-88.100000,41.400000]"));
+    }
+
+    #[test]
+    fn attach_geojson_geometries_matches_plan_units() {
+        let input = seed_plan_input();
+        let geojson = include_str!("../../../data/boundaries/seed-boundaries.geojson");
+        let report =
+            attach_geojson_geometries(&input, geojson, &GeometryJoinOptions::default()).unwrap();
+
+        assert_eq!(report.matched_unit_count, 4);
+        assert!(report.unmatched_unit_ids.is_empty());
+        assert!(report.unused_feature_unit_ids.is_empty());
+        assert!(matches!(
+            report.input.units[0].map_geometry,
+            Some(MapGeometry::Polygon(_))
+        ));
+    }
+
+    #[test]
+    fn attach_geojson_geometries_reports_missing_required_units() {
+        let input = seed_plan_input();
+        let geojson = r#"{
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "properties": { "unit_id": "west-a" },
+                "geometry": { "type": "Point", "coordinates": [-87.6, 41.8] }
+            }]
+        }"#;
+        let err = attach_geojson_geometries(
+            &input,
+            geojson,
+            &GeometryJoinOptions {
+                unit_id_property: "unit_id".to_string(),
+                require_all_units: true,
+            },
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            GeometryJoinError::MissingRequiredUnits {
+                unit_ids: vec![
+                    "west-b".to_string(),
+                    "east-a".to_string(),
+                    "east-b".to_string()
+                ],
+            }
+        );
     }
 
     #[test]

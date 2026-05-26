@@ -1,0 +1,78 @@
+{
+  "type": "FeatureCollection",
+  "name": "zones_seed_boundaries",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "west-a",
+      "properties": {
+        "unit_id": "west-a",
+        "name": "West A County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-88.1, 41.4],
+          [-87.1, 41.4],
+          [-87.1, 42.2],
+          [-88.1, 42.2],
+          [-88.1, 41.4]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "west-b",
+      "properties": {
+        "unit_id": "west-b",
+        "name": "West B County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-86.7, 39.3],
+          [-85.7, 39.3],
+          [-85.7, 40.2],
+          [-86.7, 40.2],
+          [-86.7, 39.3]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "east-a",
+      "properties": {
+        "unit_id": "east-a",
+        "name": "East A County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-74.5, 40.3],
+          [-73.5, 40.3],
+          [-73.5, 41.1],
+          [-74.5, 41.1],
+          [-74.5, 40.3]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "east-b",
+      "properties": {
+        "unit_id": "east-b",
+        "name": "East B County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-75.7, 39.5],
+          [-74.7, 39.5],
+          [-74.7, 40.4],
+          [-75.7, 40.4],
+          [-75.7, 39.5]
+        ]]
+      }
+    }
+  ]
+}

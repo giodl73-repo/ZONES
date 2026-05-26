@@ -96,6 +96,9 @@ When plan units include `map_geometry` polygons or multipolygons, GeoJSON emits
 those shapes. If only `map_point` coordinates are present, it emits
 representative points; otherwise it falls back to schematic points derived from
 solar offset.
+`attach-geojson-geometries` joins a boundary FeatureCollection into a plan input
+by unit id, which lets county/state boundary exports from BISECT or RPLAN feed
+the same offset-fit reports and maps.
 `data/plan-inputs/seed-plan-map-points.json` is the seed fixture for
 coordinate-aware map rendering.
 
