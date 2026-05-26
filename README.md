@@ -74,6 +74,9 @@ The seed zone catalog proves ZONES can represent whole-hour, half-hour, and
 fixture. It validates the serializable contract for jurisdictions, boundary
 units, graph versions, time-zone regimes, offset rules, DST deltas, and
 evaluation contexts without claiming to be a legal dataset.
+`data/source-limitation-matrix/global-source-claims.json` records which source
+families can support offset-history, legal-boundary, administrative-boundary,
+metadata, population, and representative-point claims.
 
 ## Non-goals
 

@@ -4,8 +4,8 @@ use std::{fs, path::PathBuf};
 use zones_core::{
     evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture, seed_plan_input,
-    seed_source_manifest, seed_temporal_dataset, seed_zone_catalog, SourceManifest,
-    TemporalDataset, ZoneCatalog, ZonePlanInput,
+    seed_source_limitation_matrix, seed_source_manifest, seed_temporal_dataset, seed_zone_catalog,
+    SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -64,6 +64,11 @@ enum Command {
     SeedTemporalDataset,
     TemporalDatasetReport {
         #[arg(default_value = "data/temporal-fixtures/non-us-pilot.json")]
+        path: PathBuf,
+    },
+    SeedSourceLimitationMatrix,
+    SourceLimitationReport {
+        #[arg(default_value = "data/source-limitation-matrix/global-source-claims.json")]
         path: PathBuf,
     },
 }
@@ -158,6 +163,18 @@ fn main() -> Result<()> {
             let dataset: TemporalDataset = serde_json::from_slice(&bytes)
                 .with_context(|| format!("failed to parse {}", path.display()))?;
             let report = dataset.report()?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedSourceLimitationMatrix => {
+            let matrix = seed_source_limitation_matrix();
+            println!("{}", serde_json::to_string_pretty(&matrix)?);
+        }
+        Command::SourceLimitationReport { path } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let matrix: SourceLimitationMatrix = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = matrix.report()?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
     }

@@ -71,12 +71,12 @@ Falsifiers:
 - [ ] Validate US county baseline context.
 - [x] Validate one non-US pilot.
 - [ ] Compare IANA lookup to selected legal-boundary source.
-- [ ] Produce source limitation matrix.
+- [x] Produce source limitation matrix.
 
 ## Quality Checkpoints
 
 - [x] Model separates current law, historical law, proposed scenarios, and
   analytic counterfactuals.
 - [ ] RPLAN/RLINE/ZONES boundaries are explicit.
-- [ ] IANA is not described as complete legal-boundary evidence.
-- [ ] Non-US pilot caveats are visible.
+- [x] IANA is not described as complete legal-boundary evidence.
+- [x] Non-US pilot caveats are visible.

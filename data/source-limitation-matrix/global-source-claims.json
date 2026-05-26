@@ -1,0 +1,126 @@
+{
+  "matrix_id": "zones-source-limitation-matrix-v0",
+  "generated_on": "2026-05-26",
+  "entries": [
+    {
+      "source_id": "iana-tzdb",
+      "source_kind": "time-rule-database",
+      "title": "IANA Time Zone Database",
+      "assessments": [
+        {
+          "claim": "offset-rule-history",
+          "support": "supports",
+          "notes": "Records post-1970 civil-time transitions for representative tzdb zones."
+        },
+        {
+          "claim": "legal-boundary-geometry",
+          "support": "not-supported",
+          "notes": "Does not provide authoritative legal polygons or administrative boundary assignments."
+        },
+        {
+          "claim": "historical-reconstruction",
+          "support": "partial",
+          "notes": "Contains some pre-1970 material, but its own theory file warns that complete past-time handling everywhere is out of scope."
+        }
+      ],
+      "caveats": [
+        "Use for offset-rule history, not as complete legal-boundary evidence."
+      ]
+    },
+    {
+      "source_id": "unicode-cldr",
+      "source_kind": "time-rule-database",
+      "title": "Unicode CLDR time-zone metadata",
+      "assessments": [
+        {
+          "claim": "display-metadata",
+          "support": "supports",
+          "notes": "Provides localized time-zone names, aliases, and interoperability metadata."
+        },
+        {
+          "claim": "legal-boundary-geometry",
+          "support": "not-supported",
+          "notes": "Not a legal or geospatial boundary authority."
+        }
+      ],
+      "caveats": [
+        "Useful for labels and mappings, not for scoring legal zone boundaries."
+      ]
+    },
+    {
+      "source_id": "national-legal-sources",
+      "source_kind": "legal-text",
+      "title": "National statutes, regulations, and official maps",
+      "assessments": [
+        {
+          "claim": "current-legal-offset",
+          "support": "supports",
+          "notes": "Best authority for current legal claims when current and accessible."
+        },
+        {
+          "claim": "legal-boundary-geometry",
+          "support": "partial",
+          "notes": "May define legal boundaries textually or by map, but availability and machine readability vary."
+        },
+        {
+          "claim": "offset-rule-history",
+          "support": "partial",
+          "notes": "Historical law can be authoritative, but coverage, language, and amendment history vary by jurisdiction."
+        }
+      ],
+      "caveats": [
+        "Requires country-specific audit for licensing, language, currency, and historical completeness."
+      ]
+    },
+    {
+      "source_id": "official-administrative-boundaries",
+      "source_kind": "geospatial-boundary",
+      "title": "Official administrative boundary geometry",
+      "assessments": [
+        {
+          "claim": "administrative-boundary-geometry",
+          "support": "supports",
+          "notes": "Primary input for state, county, province, municipality, or district graph construction."
+        },
+        {
+          "claim": "legal-boundary-geometry",
+          "support": "partial",
+          "notes": "Supports legal time-zone scoring only when time law aligns to these units or assignments are independently derived."
+        },
+        {
+          "claim": "current-legal-offset",
+          "support": "not-supported",
+          "notes": "Boundary geometry alone does not identify the legal UTC offset."
+        }
+      ],
+      "caveats": [
+        "Must be paired with legal time-zone assignments and source vintages."
+      ]
+    },
+    {
+      "source_id": "population-and-representative-points",
+      "source_kind": "population",
+      "title": "Population weights and representative points",
+      "assessments": [
+        {
+          "claim": "population-weights",
+          "support": "supports",
+          "notes": "Needed for population-weighted error and disruption metrics."
+        },
+        {
+          "claim": "representative-point",
+          "support": "supports",
+          "notes": "Needed to compute longitude-derived solar offset when geometry is not directly integrated."
+        },
+        {
+          "claim": "legal-boundary-geometry",
+          "support": "not-supported",
+          "notes": "Representative points and population tables do not establish legal time-zone boundaries."
+        }
+      ],
+      "caveats": [
+        "Centroid, internal-point, and population-center choices can change measured solar error."
+      ]
+    }
+  ]
+}

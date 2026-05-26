@@ -55,6 +55,64 @@ pub struct SourceManifestReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceClaim {
+    OffsetRuleHistory,
+    CurrentLegalOffset,
+    LegalBoundaryGeometry,
+    AdministrativeBoundaryGeometry,
+    RepresentativePoint,
+    PopulationWeights,
+    DisplayMetadata,
+    HistoricalReconstruction,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceSupportLevel {
+    Supports,
+    Partial,
+    NotSupported,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceClaimAssessment {
+    pub claim: SourceClaim,
+    pub support: SourceSupportLevel,
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceLimitationEntry {
+    pub source_id: String,
+    pub source_kind: SourceKind,
+    pub title: String,
+    pub assessments: Vec<SourceClaimAssessment>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceLimitationMatrix {
+    pub matrix_id: String,
+    pub generated_on: String,
+    pub entries: Vec<SourceLimitationEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceLimitationMatrixReport {
+    pub matrix_id: String,
+    pub entry_count: usize,
+    pub assessment_count: usize,
+    pub supports_count: usize,
+    pub partial_count: usize,
+    pub not_supported_count: usize,
+    pub unknown_count: usize,
+    pub caveated_entry_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZoneCatalog {
     pub catalog_id: String,
     pub source_manifest_id: String,
@@ -311,8 +369,12 @@ pub enum TemporalModelError {
     UnknownAssignmentZone { zone_id: String },
     #[error("source manifest contains duplicate source id {source_id}")]
     DuplicateSourceId { source_id: String },
+    #[error("source limitation matrix contains duplicate source id {source_id}")]
+    DuplicateSourceLimitationSourceId { source_id: String },
     #[error("source {source_id} has empty URL")]
     EmptySourceUrl { source_id: String },
+    #[error("source limitation entry {source_id} has no assessments")]
+    EmptySourceAssessments { source_id: String },
     #[error("{owner_kind} references unknown source id {source_id}")]
     UnknownSourceReference {
         owner_kind: &'static str,
@@ -396,6 +458,74 @@ impl SourceManifest {
                 SourceKind::DerivedManifest => report.derived_manifest_count += 1,
                 SourceKind::ResearchNote => report.research_note_count += 1,
                 SourceKind::Imported => report.imported_count += 1,
+            }
+        }
+        Ok(report)
+    }
+}
+
+impl SourceClaimAssessment {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("source_claim_assessment.notes", &self.notes)
+    }
+}
+
+impl SourceLimitationEntry {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("source_limitation_entry.source_id", &self.source_id)?;
+        validate_non_empty("source_limitation_entry.title", &self.title)?;
+        if self.assessments.is_empty() {
+            return Err(TemporalModelError::EmptySourceAssessments {
+                source_id: self.source_id.clone(),
+            });
+        }
+        for assessment in &self.assessments {
+            assessment.validate()?;
+        }
+        Ok(())
+    }
+}
+
+impl SourceLimitationMatrix {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("source_limitation_matrix.matrix_id", &self.matrix_id)?;
+        validate_non_empty("source_limitation_matrix.generated_on", &self.generated_on)?;
+        let mut source_ids = BTreeSet::new();
+        for entry in &self.entries {
+            entry.validate()?;
+            if !source_ids.insert(entry.source_id.as_str()) {
+                return Err(TemporalModelError::DuplicateSourceLimitationSourceId {
+                    source_id: entry.source_id.clone(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn report(&self) -> Result<SourceLimitationMatrixReport, TemporalModelError> {
+        self.validate()?;
+        let mut report = SourceLimitationMatrixReport {
+            matrix_id: self.matrix_id.clone(),
+            entry_count: self.entries.len(),
+            assessment_count: 0,
+            supports_count: 0,
+            partial_count: 0,
+            not_supported_count: 0,
+            unknown_count: 0,
+            caveated_entry_count: 0,
+        };
+        for entry in &self.entries {
+            if !entry.caveats.is_empty() {
+                report.caveated_entry_count += 1;
+            }
+            for assessment in &entry.assessments {
+                report.assessment_count += 1;
+                match assessment.support {
+                    SourceSupportLevel::Supports => report.supports_count += 1,
+                    SourceSupportLevel::Partial => report.partial_count += 1,
+                    SourceSupportLevel::NotSupported => report.not_supported_count += 1,
+                    SourceSupportLevel::Unknown => report.unknown_count += 1,
+                }
             }
         }
         Ok(report)
@@ -1549,6 +1679,152 @@ pub fn seed_source_manifest() -> SourceManifest {
     }
 }
 
+pub fn seed_source_limitation_matrix() -> SourceLimitationMatrix {
+    SourceLimitationMatrix {
+        matrix_id: "zones-source-limitation-matrix-v0".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        entries: vec![
+            SourceLimitationEntry {
+                source_id: "iana-tzdb".to_string(),
+                source_kind: SourceKind::TimeRuleDatabase,
+                title: "IANA Time Zone Database".to_string(),
+                assessments: vec![
+                    SourceClaimAssessment {
+                        claim: SourceClaim::OffsetRuleHistory,
+                        support: SourceSupportLevel::Supports,
+                        notes: "Records post-1970 civil-time transitions for representative tzdb zones."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::LegalBoundaryGeometry,
+                        support: SourceSupportLevel::NotSupported,
+                        notes: "Does not provide authoritative legal polygons or administrative boundary assignments."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::HistoricalReconstruction,
+                        support: SourceSupportLevel::Partial,
+                        notes: "Contains some pre-1970 material, but its own theory file warns that complete past-time handling everywhere is out of scope."
+                            .to_string(),
+                    },
+                ],
+                caveats: vec![
+                    "Use for offset-rule history, not as complete legal-boundary evidence."
+                        .to_string(),
+                ],
+            },
+            SourceLimitationEntry {
+                source_id: "unicode-cldr".to_string(),
+                source_kind: SourceKind::TimeRuleDatabase,
+                title: "Unicode CLDR time-zone metadata".to_string(),
+                assessments: vec![
+                    SourceClaimAssessment {
+                        claim: SourceClaim::DisplayMetadata,
+                        support: SourceSupportLevel::Supports,
+                        notes: "Provides localized time-zone names, aliases, and interoperability metadata."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::LegalBoundaryGeometry,
+                        support: SourceSupportLevel::NotSupported,
+                        notes: "Not a legal or geospatial boundary authority.".to_string(),
+                    },
+                ],
+                caveats: vec![
+                    "Useful for labels and mappings, not for scoring legal zone boundaries."
+                        .to_string(),
+                ],
+            },
+            SourceLimitationEntry {
+                source_id: "national-legal-sources".to_string(),
+                source_kind: SourceKind::LegalText,
+                title: "National statutes, regulations, and official maps".to_string(),
+                assessments: vec![
+                    SourceClaimAssessment {
+                        claim: SourceClaim::CurrentLegalOffset,
+                        support: SourceSupportLevel::Supports,
+                        notes: "Best authority for current legal claims when current and accessible."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::LegalBoundaryGeometry,
+                        support: SourceSupportLevel::Partial,
+                        notes: "May define legal boundaries textually or by map, but availability and machine readability vary."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::OffsetRuleHistory,
+                        support: SourceSupportLevel::Partial,
+                        notes: "Historical law can be authoritative, but coverage, language, and amendment history vary by jurisdiction."
+                            .to_string(),
+                    },
+                ],
+                caveats: vec![
+                    "Requires country-specific audit for licensing, language, currency, and historical completeness."
+                        .to_string(),
+                ],
+            },
+            SourceLimitationEntry {
+                source_id: "official-administrative-boundaries".to_string(),
+                source_kind: SourceKind::GeospatialBoundary,
+                title: "Official administrative boundary geometry".to_string(),
+                assessments: vec![
+                    SourceClaimAssessment {
+                        claim: SourceClaim::AdministrativeBoundaryGeometry,
+                        support: SourceSupportLevel::Supports,
+                        notes: "Primary input for state, county, province, municipality, or district graph construction."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::LegalBoundaryGeometry,
+                        support: SourceSupportLevel::Partial,
+                        notes: "Supports legal time-zone scoring only when time law aligns to these units or assignments are independently derived."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::CurrentLegalOffset,
+                        support: SourceSupportLevel::NotSupported,
+                        notes: "Boundary geometry alone does not identify the legal UTC offset.".to_string(),
+                    },
+                ],
+                caveats: vec![
+                    "Must be paired with legal time-zone assignments and source vintages."
+                        .to_string(),
+                ],
+            },
+            SourceLimitationEntry {
+                source_id: "population-and-representative-points".to_string(),
+                source_kind: SourceKind::Population,
+                title: "Population weights and representative points".to_string(),
+                assessments: vec![
+                    SourceClaimAssessment {
+                        claim: SourceClaim::PopulationWeights,
+                        support: SourceSupportLevel::Supports,
+                        notes: "Needed for population-weighted error and disruption metrics."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::RepresentativePoint,
+                        support: SourceSupportLevel::Supports,
+                        notes: "Needed to compute longitude-derived solar offset when geometry is not directly integrated."
+                            .to_string(),
+                    },
+                    SourceClaimAssessment {
+                        claim: SourceClaim::LegalBoundaryGeometry,
+                        support: SourceSupportLevel::NotSupported,
+                        notes: "Representative points and population tables do not establish legal time-zone boundaries."
+                            .to_string(),
+                    },
+                ],
+                caveats: vec![
+                    "Centroid, internal-point, and population-center choices can change measured solar error."
+                        .to_string(),
+                ],
+            },
+        ],
+    }
+}
+
 pub fn seed_zone_catalog() -> ZoneCatalog {
     ZoneCatalog {
         catalog_id: "zones-seed-offset-catalog".to_string(),
@@ -2302,6 +2578,43 @@ mod tests {
         assert_eq!(report.geospatial_boundary_count, 1);
         assert_eq!(report.time_rule_database_count, 1);
         assert_eq!(report.representative_point_count, 1);
+    }
+
+    #[test]
+    fn seed_source_limitation_matrix_reports_claim_support() {
+        let report = seed_source_limitation_matrix().report().unwrap();
+
+        assert_eq!(report.matrix_id, "zones-source-limitation-matrix-v0");
+        assert_eq!(report.entry_count, 5);
+        assert_eq!(report.assessment_count, 14);
+        assert_eq!(report.supports_count, 6);
+        assert_eq!(report.partial_count, 4);
+        assert_eq!(report.not_supported_count, 4);
+        assert_eq!(report.caveated_entry_count, 5);
+    }
+
+    #[test]
+    fn committed_source_limitation_matrix_matches_seed_matrix() {
+        let matrix: SourceLimitationMatrix = serde_json::from_str(include_str!(
+            "../../../data/source-limitation-matrix/global-source-claims.json"
+        ))
+        .unwrap();
+
+        assert_eq!(matrix, seed_source_limitation_matrix());
+        assert!(matrix.report().is_ok());
+    }
+
+    #[test]
+    fn source_limitation_matrix_rejects_duplicate_sources() {
+        let mut matrix = seed_source_limitation_matrix();
+        matrix.entries[1].source_id = "iana-tzdb".to_string();
+
+        assert_eq!(
+            matrix.validate(),
+            Err(TemporalModelError::DuplicateSourceLimitationSourceId {
+                source_id: "iana-tzdb".to_string(),
+            })
+        );
     }
 
     #[test]

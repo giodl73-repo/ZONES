@@ -32,6 +32,12 @@ minimum global/historical contract is:
 - source confidence and caveats;
 - whether the record is legal, historical reconstruction, or analytic scenario.
 
+The committed source-claim matrix at
+`data/source-limitation-matrix/global-source-claims.json` makes these limits
+machine-checkable. It separates claims about offset-rule history, legal boundary
+geometry, administrative boundary geometry, display metadata, population
+weights, and representative points.
+
 ## Non-US Pilot Selection Criteria
 
 A first non-US pilot should have:
@@ -49,4 +55,5 @@ A first non-US pilot should have:
 - Audit whether source licensing allows derived zone-assignment tables.
 - Add fixtures that prove the Rust temporal model can represent non-US rules
   without US-specific fields.
-- Document which claims rely on IANA rules versus national legal sources.
+- Extend the source-claim matrix with pilot-specific national sources once a
+  real non-US pilot is selected.
