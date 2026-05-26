@@ -384,5 +384,6 @@ dependencies = [
  "rgraph-core",
  "rplan-core",
  "serde",
+ "serde_json",
  "thiserror",
 ]

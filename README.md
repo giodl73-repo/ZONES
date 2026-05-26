@@ -42,11 +42,13 @@ they had to follow state, county, or equivalent boundaries?
 
 ```powershell
 cargo run -p zones-cli -- seed-report
+cargo run -p zones-cli -- source-report
 ```
 
 The seed report runs a tiny four-county fixture through the first plan evaluator.
 It is not a real proposal; it proves the scoring contract and RLINE dependency
-shape.
+shape. The source report validates the first committed source manifest and
+summarizes which source categories are currently covered.
 
 ## Non-goals
 

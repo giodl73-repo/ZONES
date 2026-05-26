@@ -1,0 +1,58 @@
+{
+  "manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-26",
+  "sources": [
+    {
+      "source_id": "census-tiger-counties-2024",
+      "title": "2024 TIGER/Line Counties",
+      "kind": "geospatial-boundary",
+      "url": "https://www.census.gov/cgi-bin/geo/shapefiles/index.php?layergroup=Counties&year=2024",
+      "retrieved_on": "2026-05-26",
+      "vintage": "2024",
+      "caveats": [
+        "Boundary source only; not evidence of legal time-zone assignment."
+      ]
+    },
+    {
+      "source_id": "census-county-gazetteer-2024",
+      "title": "2024 County Gazetteer Files",
+      "kind": "representative-point",
+      "url": "https://www.census.gov/geographies/reference-files/2024/geo/gazetter-file.html",
+      "retrieved_on": "2026-05-26",
+      "vintage": "2024",
+      "caveats": [
+        "Internal points are exploratory and not population-weighted."
+      ]
+    },
+    {
+      "source_id": "dot-49-cfr-71",
+      "title": "49 CFR Part 71",
+      "kind": "legal-text",
+      "url": "https://www.ecfr.gov/current/title-49/subtitle-A/part-71",
+      "retrieved_on": "2026-05-26",
+      "caveats": [
+        "Legal text must be converted to geospatial assignments before county scoring."
+      ]
+    },
+    {
+      "source_id": "dot-time-zone-procedure",
+      "title": "Procedure for Moving an Area from One Time Zone to Another",
+      "kind": "legal-text",
+      "url": "https://www.transportation.gov/regulations/procedure-moving-area-one-time-zone-another",
+      "retrieved_on": "2026-05-26",
+      "caveats": [
+        "Procedure guidance, not a scoring dataset."
+      ]
+    },
+    {
+      "source_id": "iana-tzdb-theory",
+      "title": "Theory and pragmatics of the tz code and data",
+      "kind": "time-rule-database",
+      "url": "https://ftp.iana.org/tz/theory.html",
+      "retrieved_on": "2026-05-26",
+      "caveats": [
+        "IANA tzdb does not record complete legal boundaries."
+      ]
+    }
+  ]
+}

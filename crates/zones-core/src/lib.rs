@@ -40,6 +40,21 @@ pub struct SourceManifest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceManifestReport {
+    pub manifest_id: String,
+    pub source_count: usize,
+    pub caveated_source_count: usize,
+    pub legal_text_count: usize,
+    pub geospatial_boundary_count: usize,
+    pub time_rule_database_count: usize,
+    pub population_count: usize,
+    pub representative_point_count: usize,
+    pub derived_manifest_count: usize,
+    pub research_note_count: usize,
+    pub imported_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TemporalExtent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub valid_from: Option<String>,
@@ -286,6 +301,39 @@ impl SourceManifest {
             }
         }
         Ok(())
+    }
+
+    pub fn report(&self) -> Result<SourceManifestReport, TemporalModelError> {
+        self.validate()?;
+        let mut report = SourceManifestReport {
+            manifest_id: self.manifest_id.clone(),
+            source_count: self.sources.len(),
+            caveated_source_count: 0,
+            legal_text_count: 0,
+            geospatial_boundary_count: 0,
+            time_rule_database_count: 0,
+            population_count: 0,
+            representative_point_count: 0,
+            derived_manifest_count: 0,
+            research_note_count: 0,
+            imported_count: 0,
+        };
+        for source in &self.sources {
+            if !source.caveats.is_empty() {
+                report.caveated_source_count += 1;
+            }
+            match source.kind {
+                SourceKind::LegalText => report.legal_text_count += 1,
+                SourceKind::GeospatialBoundary => report.geospatial_boundary_count += 1,
+                SourceKind::TimeRuleDatabase => report.time_rule_database_count += 1,
+                SourceKind::Population => report.population_count += 1,
+                SourceKind::RepresentativePoint => report.representative_point_count += 1,
+                SourceKind::DerivedManifest => report.derived_manifest_count += 1,
+                SourceKind::ResearchNote => report.research_note_count += 1,
+                SourceKind::Imported => report.imported_count += 1,
+            }
+        }
+        Ok(report)
     }
 }
 
@@ -680,6 +728,65 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
     (units, adjacency, plan)
 }
 
+pub fn seed_source_manifest() -> SourceManifest {
+    SourceManifest {
+        manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        sources: vec![
+            SourceCitation {
+                source_id: "census-tiger-counties-2024".to_string(),
+                title: "2024 TIGER/Line Counties".to_string(),
+                kind: SourceKind::GeospatialBoundary,
+                url: "https://www.census.gov/cgi-bin/geo/shapefiles/index.php?layergroup=Counties&year=2024".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: Some("2024".to_string()),
+                content_hash: None,
+                caveats: vec!["Boundary source only; not evidence of legal time-zone assignment.".to_string()],
+            },
+            SourceCitation {
+                source_id: "census-county-gazetteer-2024".to_string(),
+                title: "2024 County Gazetteer Files".to_string(),
+                kind: SourceKind::RepresentativePoint,
+                url: "https://www.census.gov/geographies/reference-files/2024/geo/gazetter-file.html".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: Some("2024".to_string()),
+                content_hash: None,
+                caveats: vec!["Internal points are exploratory and not population-weighted.".to_string()],
+            },
+            SourceCitation {
+                source_id: "dot-49-cfr-71".to_string(),
+                title: "49 CFR Part 71".to_string(),
+                kind: SourceKind::LegalText,
+                url: "https://www.ecfr.gov/current/title-49/subtitle-A/part-71".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: None,
+                content_hash: None,
+                caveats: vec!["Legal text must be converted to geospatial assignments before county scoring.".to_string()],
+            },
+            SourceCitation {
+                source_id: "dot-time-zone-procedure".to_string(),
+                title: "Procedure for Moving an Area from One Time Zone to Another".to_string(),
+                kind: SourceKind::LegalText,
+                url: "https://www.transportation.gov/regulations/procedure-moving-area-one-time-zone-another".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: None,
+                content_hash: None,
+                caveats: vec!["Procedure guidance, not a scoring dataset.".to_string()],
+            },
+            SourceCitation {
+                source_id: "iana-tzdb-theory".to_string(),
+                title: "Theory and pragmatics of the tz code and data".to_string(),
+                kind: SourceKind::TimeRuleDatabase,
+                url: "https://ftp.iana.org/tz/theory.html".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: None,
+                content_hash: None,
+                caveats: vec!["IANA tzdb does not record complete legal boundaries.".to_string()],
+            },
+        ],
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -905,6 +1012,30 @@ mod tests {
             ],
         )
         .is_ok());
+    }
+
+    #[test]
+    fn seed_source_manifest_reports_source_mix() {
+        let report = seed_source_manifest().report().unwrap();
+
+        assert_eq!(report.manifest_id, "zones-us-foundation-sources");
+        assert_eq!(report.source_count, 5);
+        assert_eq!(report.caveated_source_count, 5);
+        assert_eq!(report.legal_text_count, 2);
+        assert_eq!(report.geospatial_boundary_count, 1);
+        assert_eq!(report.time_rule_database_count, 1);
+        assert_eq!(report.representative_point_count, 1);
+    }
+
+    #[test]
+    fn committed_source_manifest_matches_seed_manifest() {
+        let manifest: SourceManifest = serde_json::from_str(include_str!(
+            "../../../data/source-manifests/us-foundation.json"
+        ))
+        .unwrap();
+
+        assert_eq!(manifest, seed_source_manifest());
+        assert!(manifest.report().is_ok());
     }
 
     #[test]
