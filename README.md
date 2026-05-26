@@ -49,9 +49,9 @@ cargo run -p zones-cli -- source-report
 The seed report runs a tiny four-county fixture through the first plan evaluator.
 It is not a real proposal; it proves the scoring contract and RLINE dependency
 shape. The evaluate-plan command runs the same contract from a JSON input file,
-which is the path real county baselines should use. The source report validates
-the first committed source manifest and summarizes which source categories are
-currently covered.
+checks that the named source manifest matches, and then scores the plan. The
+source report validates the first committed source manifest and summarizes which
+source categories are currently covered.
 
 ## Non-goals
 

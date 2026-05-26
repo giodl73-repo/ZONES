@@ -100,6 +100,11 @@ The portable JSON plan-input contract contains:
 - `plan`, with zone specs and one assignment index per unit;
 - `caveats`, for fixture/source limitations.
 
+`evaluate-plan` must validate the referenced source manifest id before scoring.
+This is intentionally shallow at the foundation layer: later county baselines
+must add per-field source references, but even the seed path should reject a
+plan file whose manifest identity does not match the supplied manifest.
+
 Foundation scoring uses minutes as the unit. A unit's **standard solar error**
 is:
 

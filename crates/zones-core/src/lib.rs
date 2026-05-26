@@ -576,6 +576,15 @@ pub enum ZonePlanError {
     Connectivity(String),
     #[error("empty id for {kind}")]
     EmptyId { kind: &'static str },
+    #[error("source manifest validation failed: {0}")]
+    SourceManifest(String),
+    #[error(
+        "plan input source_manifest_id {input_source_manifest_id} does not match manifest id {manifest_id}"
+    )]
+    SourceManifestMismatch {
+        input_source_manifest_id: String,
+        manifest_id: String,
+    },
 }
 
 pub fn evaluate_zone_plan(
@@ -629,6 +638,22 @@ pub fn evaluate_zone_plan_input(input: &ZonePlanInput) -> Result<ZonePlanReport,
         &input.source_manifest_id,
     )?;
     evaluate_zone_plan(&input.units, &input.adjacency, &input.plan)
+}
+
+pub fn evaluate_zone_plan_input_with_manifest(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+) -> Result<ZonePlanReport, ZonePlanError> {
+    manifest
+        .validate()
+        .map_err(|err| ZonePlanError::SourceManifest(err.to_string()))?;
+    if input.source_manifest_id != manifest.manifest_id {
+        return Err(ZonePlanError::SourceManifestMismatch {
+            input_source_manifest_id: input.source_manifest_id.clone(),
+            manifest_id: manifest.manifest_id.clone(),
+        });
+    }
+    evaluate_zone_plan_input(input)
 }
 
 pub fn evaluate_rplan_zone_context(
@@ -879,12 +904,36 @@ mod tests {
     }
 
     #[test]
+    fn seed_plan_input_scores_with_matching_source_manifest() {
+        let report =
+            evaluate_zone_plan_input_with_manifest(&seed_plan_input(), &seed_source_manifest())
+                .unwrap();
+
+        assert_eq!(report.plan_name, "seed-two-zone-plan");
+        assert_eq!(report.unit_count, 4);
+    }
+
+    #[test]
+    fn plan_input_rejects_mismatched_source_manifest() {
+        let mut manifest = seed_source_manifest();
+        manifest.manifest_id = "different-manifest".to_string();
+
+        assert_eq!(
+            evaluate_zone_plan_input_with_manifest(&seed_plan_input(), &manifest),
+            Err(ZonePlanError::SourceManifestMismatch {
+                input_source_manifest_id: "zones-us-foundation-sources".to_string(),
+                manifest_id: "different-manifest".to_string(),
+            })
+        );
+    }
+
+    #[test]
     fn committed_plan_input_matches_seed_input() {
         let input: ZonePlanInput =
             serde_json::from_str(include_str!("../../../data/plan-inputs/seed-plan.json")).unwrap();
 
         assert_eq!(input, seed_plan_input());
-        assert!(evaluate_zone_plan_input(&input).is_ok());
+        assert!(evaluate_zone_plan_input_with_manifest(&input, &seed_source_manifest()).is_ok());
     }
 
     #[test]
