@@ -92,6 +92,8 @@ half-hour, and quarter-hour options.
 page.
 `write-offset-geojson` exports the same offset-fit fields as schematic GeoJSON
 point features for GIS inspection and later polygon joins.
+When plan units include `map_point` coordinates, GeoJSON uses those coordinates;
+otherwise it falls back to schematic points derived from solar offset.
 
 ## Non-goals
 

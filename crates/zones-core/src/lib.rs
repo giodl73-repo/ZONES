@@ -1008,11 +1008,21 @@ fn validate_non_empty(kind: &'static str, value: &str) -> Result<(), TemporalMod
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MapPoint {
+    pub latitude: f64,
+    pub longitude: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoundaryUnit {
     pub id: String,
     pub name: String,
     pub solar_offset_minutes: f64,
     pub population: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub map_point: Option<MapPoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1122,6 +1132,8 @@ pub struct OffsetFitUnitScore {
     pub unit_name: String,
     pub population: u64,
     pub solar_offset_minutes: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub map_point: Option<MapPoint>,
     pub current_zone_id: String,
     pub current_standard_offset_minutes: i32,
     pub current_standard_error_minutes: f64,
@@ -1240,6 +1252,10 @@ pub enum ZonePlanError {
     },
     #[error("total population must be greater than zero")]
     EmptyPopulation,
+    #[error("unit {unit_id} map latitude {latitude} is outside [-90, 90]")]
+    InvalidMapLatitude { unit_id: String, latitude: String },
+    #[error("unit {unit_id} map longitude {longitude} is outside [-180, 180]")]
+    InvalidMapLongitude { unit_id: String, longitude: String },
     #[error("RPLAN context has no graph")]
     MissingRplanGraph,
     #[error("RPLAN context has no populations")]
@@ -1469,6 +1485,7 @@ pub fn evaluate_offset_fit(
             unit_name: unit.name.clone(),
             population: unit.population,
             solar_offset_minutes: unit.solar_offset_minutes,
+            map_point: unit.map_point.clone(),
             current_zone_id: current_zone.id.clone(),
             current_standard_offset_minutes: current_zone.utc_offset_minutes,
             current_standard_error_minutes: current_standard_error,
@@ -1654,10 +1671,21 @@ pub fn render_offset_fit_geojson(report: &OffsetFitReport) -> String {
         if index > 0 {
             geojson.push_str(",\n");
         }
-        let longitude = score.solar_offset_minutes / 4.0;
-        let latitude = schematic_latitude(index, report.unit_scores.len());
+        let (longitude, latitude, geometry_note) = if let Some(point) = &score.map_point {
+            (
+                point.longitude,
+                point.latitude,
+                "representative point from plan input",
+            )
+        } else {
+            (
+                score.solar_offset_minutes / 4.0,
+                schematic_latitude(index, report.unit_scores.len()),
+                "schematic point; longitude inferred from solar offset",
+            )
+        };
         geojson.push_str(&format!(
-            "{{\"type\":\"Feature\",\"id\":\"{}\",\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{:.6},{:.6}]}},\"properties\":{{\"unit_id\":\"{}\",\"unit_name\":\"{}\",\"population\":{},\"solar_offset_minutes\":{},\"current_zone_id\":\"{}\",\"current_standard_offset_minutes\":{},\"current_standard_error_minutes\":{},\"current_dst_offset_minutes\":{},\"current_dst_error_minutes\":{},\"best_whole_hour_offset_minutes\":{},\"best_whole_hour_error_minutes\":{},\"best_half_hour_offset_minutes\":{},\"best_half_hour_error_minutes\":{},\"best_quarter_hour_offset_minutes\":{},\"best_quarter_hour_error_minutes\":{},\"geometry_note\":\"schematic point; longitude inferred from solar offset\"}}}}",
+            "{{\"type\":\"Feature\",\"id\":\"{}\",\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{:.6},{:.6}]}},\"properties\":{{\"unit_id\":\"{}\",\"unit_name\":\"{}\",\"population\":{},\"solar_offset_minutes\":{},\"current_zone_id\":\"{}\",\"current_standard_offset_minutes\":{},\"current_standard_error_minutes\":{},\"current_dst_offset_minutes\":{},\"current_dst_error_minutes\":{},\"best_whole_hour_offset_minutes\":{},\"best_whole_hour_error_minutes\":{},\"best_half_hour_offset_minutes\":{},\"best_half_hour_error_minutes\":{},\"best_quarter_hour_offset_minutes\":{},\"best_quarter_hour_error_minutes\":{},\"geometry_note\":\"{}\"}}}}",
             escape_json(&score.unit_id),
             longitude,
             latitude,
@@ -1676,6 +1704,7 @@ pub fn render_offset_fit_geojson(report: &OffsetFitReport) -> String {
             score.best_half_hour_error_minutes,
             score.best_quarter_hour_offset_minutes,
             score.best_quarter_hour_error_minutes,
+            escape_json(geometry_note),
         ));
     }
     geojson.push_str("\n]}\n");
@@ -1968,6 +1997,7 @@ pub fn evaluate_rplan_zone_context(
             name: unit_id.clone(),
             solar_offset_minutes: solar_offset_minutes[unit_index],
             population: population as u64,
+            map_point: None,
         });
     }
     let adjacency = graph
@@ -1999,6 +2029,22 @@ fn validate_inputs(
             adjacency_count: adjacency.len(),
             unit_count: units.len(),
         });
+    }
+    for unit in units {
+        if let Some(point) = &unit.map_point {
+            if !point.latitude.is_finite() || point.latitude < -90.0 || point.latitude > 90.0 {
+                return Err(ZonePlanError::InvalidMapLatitude {
+                    unit_id: unit.id.clone(),
+                    latitude: point.latitude.to_string(),
+                });
+            }
+            if !point.longitude.is_finite() || point.longitude < -180.0 || point.longitude > 180.0 {
+                return Err(ZonePlanError::InvalidMapLongitude {
+                    unit_id: unit.id.clone(),
+                    longitude: point.longitude.to_string(),
+                });
+            }
+        }
     }
     for (unit_index, &zone_index) in plan.assignment.iter().enumerate() {
         if zone_index >= plan.zones.len() {
@@ -2102,24 +2148,28 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             name: "West A County".to_string(),
             solar_offset_minutes: -360.0,
             population: 100,
+            map_point: None,
         },
         BoundaryUnit {
             id: "west-b".to_string(),
             name: "West B County".to_string(),
             solar_offset_minutes: -345.0,
             population: 80,
+            map_point: None,
         },
         BoundaryUnit {
             id: "east-a".to_string(),
             name: "East A County".to_string(),
             solar_offset_minutes: -300.0,
             population: 90,
+            map_point: None,
         },
         BoundaryUnit {
             id: "east-b".to_string(),
             name: "East B County".to_string(),
             solar_offset_minutes: -285.0,
             population: 70,
+            map_point: None,
         },
     ];
     let adjacency = vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]];
@@ -2920,6 +2970,40 @@ mod tests {
     }
 
     #[test]
+    fn offset_fit_geojson_uses_map_points_when_available() {
+        let mut input = seed_plan_input();
+        input.units[1].map_point = Some(MapPoint {
+            latitude: 41.8781,
+            longitude: -87.6298,
+            source_id: Some("test-point".to_string()),
+        });
+
+        let report = evaluate_offset_fit(&input, 60).unwrap();
+        let geojson = render_offset_fit_geojson(&report);
+
+        assert!(geojson.contains("\"coordinates\":[-87.629800,41.878100]"));
+        assert!(geojson.contains("representative point from plan input"));
+    }
+
+    #[test]
+    fn plan_input_rejects_invalid_map_point() {
+        let mut input = seed_plan_input();
+        input.units[0].map_point = Some(MapPoint {
+            latitude: 91.0,
+            longitude: -90.0,
+            source_id: None,
+        });
+
+        assert_eq!(
+            evaluate_zone_plan_input(&input),
+            Err(ZonePlanError::InvalidMapLatitude {
+                unit_id: "west-a".to_string(),
+                latitude: "91".to_string(),
+            })
+        );
+    }
+
+    #[test]
     fn committed_plan_input_matches_seed_input() {
         let input: ZonePlanInput =
             serde_json::from_str(include_str!("../../../data/plan-inputs/seed-plan.json")).unwrap();
@@ -2959,6 +3043,7 @@ mod tests {
             name: "Half Hour Pilot".to_string(),
             solar_offset_minutes: 330.0,
             population: 100,
+            map_point: None,
         }];
         let adjacency = vec![vec![]];
         let plan = ZonePlan {
@@ -2983,6 +3068,7 @@ mod tests {
             name: "Quarter Hour Pilot".to_string(),
             solar_offset_minutes: 345.0,
             population: 100,
+            map_point: None,
         }];
         let adjacency = vec![vec![]];
         let plan = ZonePlan {
