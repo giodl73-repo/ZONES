@@ -147,14 +147,19 @@ fn write_unit_scores_csv(path: &PathBuf, scores: &[zones_core::ZoneUnitScore]) -
             .with_context(|| format!("failed to create output directory {}", parent.display()))?;
     }
     let mut csv = String::from(
-        "unit_id,unit_name,zone_id,population,solar_offset_minutes,zone_utc_offset_minutes,absolute_error_minutes\n",
+        "unit_id,unit_name,zone_id,reference_zone_id,moved_from_reference,population,solar_offset_minutes,zone_utc_offset_minutes,absolute_error_minutes\n",
     );
     for score in scores {
         csv.push_str(&format!(
-            "{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{}\n",
             csv_cell(&score.unit_id),
             csv_cell(&score.unit_name),
             csv_cell(&score.zone_id),
+            csv_cell(score.reference_zone_id.as_deref().unwrap_or("")),
+            score
+                .moved_from_reference
+                .map(|moved| moved.to_string())
+                .unwrap_or_default(),
             score.population,
             score.solar_offset_minutes,
             score.zone_utc_offset_minutes,

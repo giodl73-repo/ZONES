@@ -64,6 +64,12 @@
       1
     ]
   },
+  "reference_assignment": [
+    0,
+    0,
+    1,
+    1
+  ],
   "caveats": [
     "Synthetic fixture for evaluator contract tests only."
   ]

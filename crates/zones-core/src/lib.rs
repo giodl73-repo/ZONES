@@ -514,6 +514,8 @@ pub struct ZonePlanInput {
     pub adjacency: Vec<Vec<usize>>,
     pub plan: ZonePlan,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reference_assignment: Vec<usize>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub caveats: Vec<String>,
 }
 
@@ -526,6 +528,10 @@ pub struct ZonePlanReport {
     pub all_zones_connected: bool,
     pub weighted_mean_absolute_error_minutes: f64,
     pub max_absolute_error_minutes: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moved_unit_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moved_population: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -533,6 +539,10 @@ pub struct ZoneUnitScore {
     pub unit_id: String,
     pub unit_name: String,
     pub zone_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reference_zone_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moved_from_reference: Option<bool>,
     pub population: u64,
     pub solar_offset_minutes: f64,
     pub zone_utc_offset_minutes: i32,
@@ -568,6 +578,16 @@ pub enum ZonePlanError {
     EmptyZones,
     #[error("unit {unit_index} is assigned to missing zone index {zone_index}")]
     UnknownZone {
+        unit_index: usize,
+        zone_index: usize,
+    },
+    #[error("reference assignment count {reference_assignment_count} does not match unit count {unit_count}")]
+    ReferenceAssignmentMismatch {
+        reference_assignment_count: usize,
+        unit_count: usize,
+    },
+    #[error("unit {unit_index} has reference assignment to missing zone index {zone_index}")]
+    UnknownReferenceZone {
         unit_index: usize,
         zone_index: usize,
     },
@@ -652,6 +672,8 @@ pub fn evaluate_zone_plan(
         all_zones_connected,
         weighted_mean_absolute_error_minutes: weighted_error / total_population as f64,
         max_absolute_error_minutes: max_error,
+        moved_unit_count: None,
+        moved_population: None,
     })
 }
 
@@ -661,7 +683,12 @@ pub fn evaluate_zone_plan_input(input: &ZonePlanInput) -> Result<ZonePlanReport,
         "zone_plan_input.source_manifest_id",
         &input.source_manifest_id,
     )?;
-    evaluate_zone_plan(&input.units, &input.adjacency, &input.plan)
+    evaluate_zone_plan_with_reference(
+        &input.units,
+        &input.adjacency,
+        &input.plan,
+        &input.reference_assignment,
+    )
 }
 
 pub fn evaluate_zone_plan_input_with_manifest(
@@ -678,7 +705,7 @@ pub fn evaluate_zone_plan_evaluation(
 ) -> Result<ZonePlanEvaluation, ZonePlanError> {
     validate_input_manifest_pair(input, manifest)?;
     let plan_report = evaluate_zone_plan_input(input)?;
-    let unit_scores = score_units(&input.units, &input.plan);
+    let unit_scores = score_units(&input.units, &input.plan, &input.reference_assignment);
     let source_caveats = manifest
         .sources
         .iter()
@@ -717,16 +744,28 @@ fn validate_input_manifest_pair(
     Ok(())
 }
 
-fn score_units(units: &[BoundaryUnit], plan: &ZonePlan) -> Vec<ZoneUnitScore> {
+fn score_units(
+    units: &[BoundaryUnit],
+    plan: &ZonePlan,
+    reference_assignment: &[usize],
+) -> Vec<ZoneUnitScore> {
     units
         .iter()
         .enumerate()
         .map(|(unit_index, unit)| {
             let zone = &plan.zones[plan.assignment[unit_index]];
+            let reference_zone_id = reference_assignment
+                .get(unit_index)
+                .map(|&zone_index| plan.zones[zone_index].id.clone());
+            let moved_from_reference = reference_assignment
+                .get(unit_index)
+                .map(|&reference_zone_index| reference_zone_index != plan.assignment[unit_index]);
             ZoneUnitScore {
                 unit_id: unit.id.clone(),
                 unit_name: unit.name.clone(),
                 zone_id: zone.id.clone(),
+                reference_zone_id,
+                moved_from_reference,
                 population: unit.population,
                 solar_offset_minutes: unit.solar_offset_minutes,
                 zone_utc_offset_minutes: zone.utc_offset_minutes,
@@ -825,6 +864,52 @@ fn validate_inputs(
     Ok(())
 }
 
+fn evaluate_zone_plan_with_reference(
+    units: &[BoundaryUnit],
+    adjacency: &[Vec<usize>],
+    plan: &ZonePlan,
+    reference_assignment: &[usize],
+) -> Result<ZonePlanReport, ZonePlanError> {
+    let mut report = evaluate_zone_plan(units, adjacency, plan)?;
+    if reference_assignment.is_empty() {
+        return Ok(report);
+    }
+    validate_reference_assignment(units, plan, reference_assignment)?;
+    let mut moved_unit_count = 0;
+    let mut moved_population = 0;
+    for (unit_index, unit) in units.iter().enumerate() {
+        if plan.assignment[unit_index] != reference_assignment[unit_index] {
+            moved_unit_count += 1;
+            moved_population += unit.population;
+        }
+    }
+    report.moved_unit_count = Some(moved_unit_count);
+    report.moved_population = Some(moved_population);
+    Ok(report)
+}
+
+fn validate_reference_assignment(
+    units: &[BoundaryUnit],
+    plan: &ZonePlan,
+    reference_assignment: &[usize],
+) -> Result<(), ZonePlanError> {
+    if reference_assignment.len() != units.len() {
+        return Err(ZonePlanError::ReferenceAssignmentMismatch {
+            reference_assignment_count: reference_assignment.len(),
+            unit_count: units.len(),
+        });
+    }
+    for (unit_index, &zone_index) in reference_assignment.iter().enumerate() {
+        if zone_index >= plan.zones.len() {
+            return Err(ZonePlanError::UnknownReferenceZone {
+                unit_index,
+                zone_index,
+            });
+        }
+    }
+    Ok(())
+}
+
 fn labels_in_use(assignment: &[usize]) -> BTreeSet<usize> {
     assignment.iter().copied().collect()
 }
@@ -890,6 +975,7 @@ pub fn seed_plan_input() -> ZonePlanInput {
         units,
         adjacency,
         plan,
+        reference_assignment: vec![0, 0, 1, 1],
         caveats: vec!["Synthetic fixture for evaluator contract tests only.".to_string()],
     }
 }
@@ -974,6 +1060,8 @@ mod tests {
         assert!(report.all_zones_connected);
         assert!((report.weighted_mean_absolute_error_minutes - 6.617647058823529).abs() < 1e-9);
         assert_eq!(report.max_absolute_error_minutes, 15.0);
+        assert_eq!(report.moved_unit_count, None);
+        assert_eq!(report.moved_population, None);
     }
 
     #[test]
@@ -983,6 +1071,33 @@ mod tests {
         assert_eq!(report.plan_name, "seed-two-zone-plan");
         assert_eq!(report.boundary_edges, 2);
         assert!(report.all_zones_connected);
+        assert_eq!(report.moved_unit_count, Some(0));
+        assert_eq!(report.moved_population, Some(0));
+    }
+
+    #[test]
+    fn plan_input_reports_moves_from_reference_assignment() {
+        let mut input = seed_plan_input();
+        input.plan.assignment = vec![0, 1, 1, 1];
+
+        let report = evaluate_zone_plan_input(&input).unwrap();
+
+        assert_eq!(report.moved_unit_count, Some(1));
+        assert_eq!(report.moved_population, Some(80));
+    }
+
+    #[test]
+    fn reference_assignment_length_is_validated() {
+        let mut input = seed_plan_input();
+        input.reference_assignment = vec![0, 1];
+
+        assert_eq!(
+            evaluate_zone_plan_input(&input),
+            Err(ZonePlanError::ReferenceAssignmentMismatch {
+                reference_assignment_count: 2,
+                unit_count: 4,
+            })
+        );
     }
 
     #[test]
@@ -1005,6 +1120,11 @@ mod tests {
         assert_eq!(evaluation.unit_scores.len(), 4);
         assert_eq!(evaluation.unit_scores[1].unit_id, "west-b");
         assert_eq!(evaluation.unit_scores[1].zone_id, "western");
+        assert_eq!(
+            evaluation.unit_scores[1].reference_zone_id,
+            Some("western".to_string())
+        );
+        assert_eq!(evaluation.unit_scores[1].moved_from_reference, Some(false));
         assert_eq!(evaluation.unit_scores[1].absolute_error_minutes, 15.0);
         assert_eq!(evaluation.input_caveats.len(), 1);
         assert_eq!(evaluation.source_caveats.len(), 5);

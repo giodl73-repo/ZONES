@@ -89,7 +89,8 @@ Every evaluated plan must report at least:
 - boundary-cut count,
 - per-zone contiguity status,
 - population-weighted mean absolute solar-time error,
-- maximum absolute solar-time error.
+- maximum absolute solar-time error,
+- moved unit count and moved population when a reference assignment is supplied.
 
 The portable JSON plan-input contract contains:
 
@@ -98,6 +99,8 @@ The portable JSON plan-input contract contains:
 - `units`, each with id, name, solar offset, and population;
 - `adjacency`, as zero-based unit-index neighbors;
 - `plan`, with zone specs and one assignment index per unit;
+- `reference_assignment`, optionally naming the current/baseline zone index for
+  each unit;
 - `caveats`, for fixture/source limitations.
 
 `evaluate-plan` must validate the referenced source manifest id before scoring.

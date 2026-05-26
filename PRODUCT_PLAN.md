@@ -16,6 +16,7 @@ time-zone plan against one or more candidate plans and emits:
 - disconnected-zone failures,
 - boundary-cut counts,
 - units moved across current legal zones,
+- population moved across current legal zones,
 - state/county boundary respect,
 - source and assumption notes,
 - JSON and CSV evaluation artifacts under ignored output paths.
