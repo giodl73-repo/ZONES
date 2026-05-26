@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::{fs, path::PathBuf};
 use zones_core::{
-    evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
+    evaluate_offset_fit, evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_source_limitation_matrix,
     seed_source_manifest, seed_temporal_dataset, seed_zone_catalog, ModuleBoundaryContract,
@@ -37,6 +37,12 @@ enum Command {
         source_manifest: PathBuf,
         #[arg(long, default_value = "data/zone-catalogs/seed-offsets.json")]
         zone_catalog: PathBuf,
+    },
+    OffsetFit {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        dst_delta_minutes: i32,
     },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
@@ -115,6 +121,17 @@ fn main() -> Result<()> {
             let evaluation =
                 evaluate_zone_plan_evaluation_with_catalog(&input, &manifest, &catalog)?;
             println!("{}", serde_json::to_string_pretty(&evaluation)?);
+        }
+        Command::OffsetFit {
+            path,
+            dst_delta_minutes,
+        } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = evaluate_offset_fit(&input, dst_delta_minutes)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::WriteEvaluation {
             path,

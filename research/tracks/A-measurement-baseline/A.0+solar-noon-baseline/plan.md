@@ -75,8 +75,8 @@ abs(longitude * 4 - standard_offset_minutes)
 
 - [ ] Build US county RPLAN context.
 - [ ] Join current legal time-zone assignment to counties.
-- [ ] Compute standard-time solar error.
-- [ ] Compute DST-period clock error.
+- [x] Compute standard-time solar error.
+- [x] Compute DST-period clock error.
 - [ ] Compare internal-point and population-weighted representative points.
 - [ ] Produce top-deviation and population-weighted summary tables.
 
@@ -97,7 +97,7 @@ abs(longitude * 4 - standard_offset_minutes)
 ## Quality Checkpoints
 
 - [ ] Hypotheses are falsifiable.
-- [ ] Standard-time and DST-period scenarios are separated.
+- [x] Standard-time and DST-period scenarios are separated.
 - [ ] DOT/legal authority caveat appears before any interpretation.
 - [ ] No candidate reform recommendation appears in the paper.
 - [ ] Source uncertainty and representative-point method are visible in every

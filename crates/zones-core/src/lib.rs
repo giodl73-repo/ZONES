@@ -1116,6 +1116,41 @@ pub struct ZonePlanEvaluation {
     pub source_caveats: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OffsetFitUnitScore {
+    pub unit_id: String,
+    pub unit_name: String,
+    pub population: u64,
+    pub solar_offset_minutes: f64,
+    pub current_zone_id: String,
+    pub current_standard_offset_minutes: i32,
+    pub current_standard_error_minutes: f64,
+    pub current_dst_offset_minutes: i32,
+    pub current_dst_error_minutes: f64,
+    pub best_whole_hour_offset_minutes: i32,
+    pub best_whole_hour_error_minutes: f64,
+    pub best_half_hour_offset_minutes: i32,
+    pub best_half_hour_error_minutes: f64,
+    pub best_quarter_hour_offset_minutes: i32,
+    pub best_quarter_hour_error_minutes: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OffsetFitReport {
+    pub input_id: String,
+    pub unit_count: usize,
+    pub total_population: u64,
+    pub current_weighted_mean_standard_error_minutes: f64,
+    pub current_weighted_mean_dst_error_minutes: f64,
+    pub best_whole_hour_weighted_mean_error_minutes: f64,
+    pub best_half_hour_weighted_mean_error_minutes: f64,
+    pub best_quarter_hour_weighted_mean_error_minutes: f64,
+    pub units_improved_by_whole_hour_count: usize,
+    pub units_improved_by_half_hour_count: usize,
+    pub units_improved_by_quarter_hour_count: usize,
+    pub unit_scores: Vec<OffsetFitUnitScore>,
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ZonePlanError {
     #[error("unit count {unit_count} does not match plan assignment count {assignment_count}")]
@@ -1335,6 +1370,107 @@ pub fn evaluate_zone_plan_evaluation_with_catalog(
     validate_input_manifest_pair(input, manifest)?;
     validate_catalog_against_manifest_and_plan(catalog, manifest, &input.plan)?;
     evaluate_zone_plan_evaluation(input, manifest)
+}
+
+pub fn evaluate_offset_fit(
+    input: &ZonePlanInput,
+    dst_delta_minutes: i32,
+) -> Result<OffsetFitReport, ZonePlanError> {
+    evaluate_zone_plan_input(input)?;
+    let total_population = input.units.iter().map(|unit| unit.population).sum::<u64>();
+    let mut unit_scores = Vec::new();
+    let mut current_standard_weighted_error = 0.0;
+    let mut current_dst_weighted_error = 0.0;
+    let mut whole_hour_weighted_error = 0.0;
+    let mut half_hour_weighted_error = 0.0;
+    let mut quarter_hour_weighted_error = 0.0;
+    let mut units_improved_by_whole_hour_count = 0;
+    let mut units_improved_by_half_hour_count = 0;
+    let mut units_improved_by_quarter_hour_count = 0;
+
+    for (unit_index, unit) in input.units.iter().enumerate() {
+        let current_zone = &input.plan.zones[input.plan.assignment[unit_index]];
+        let current_standard_error =
+            offset_error_minutes(unit.solar_offset_minutes, current_zone.utc_offset_minutes);
+        let current_dst_offset = current_zone.utc_offset_minutes + dst_delta_minutes;
+        let current_dst_error = offset_error_minutes(unit.solar_offset_minutes, current_dst_offset);
+        let (best_whole_hour_offset, best_whole_hour_error) =
+            best_candidate_offset(unit.solar_offset_minutes, 60);
+        let (best_half_hour_offset, best_half_hour_error) =
+            best_candidate_offset(unit.solar_offset_minutes, 30);
+        let (best_quarter_hour_offset, best_quarter_hour_error) =
+            best_candidate_offset(unit.solar_offset_minutes, 15);
+        let population = unit.population as f64;
+
+        current_standard_weighted_error += current_standard_error * population;
+        current_dst_weighted_error += current_dst_error * population;
+        whole_hour_weighted_error += best_whole_hour_error * population;
+        half_hour_weighted_error += best_half_hour_error * population;
+        quarter_hour_weighted_error += best_quarter_hour_error * population;
+        if best_whole_hour_error < current_standard_error {
+            units_improved_by_whole_hour_count += 1;
+        }
+        if best_half_hour_error < current_standard_error {
+            units_improved_by_half_hour_count += 1;
+        }
+        if best_quarter_hour_error < current_standard_error {
+            units_improved_by_quarter_hour_count += 1;
+        }
+
+        unit_scores.push(OffsetFitUnitScore {
+            unit_id: unit.id.clone(),
+            unit_name: unit.name.clone(),
+            population: unit.population,
+            solar_offset_minutes: unit.solar_offset_minutes,
+            current_zone_id: current_zone.id.clone(),
+            current_standard_offset_minutes: current_zone.utc_offset_minutes,
+            current_standard_error_minutes: current_standard_error,
+            current_dst_offset_minutes: current_dst_offset,
+            current_dst_error_minutes: current_dst_error,
+            best_whole_hour_offset_minutes: best_whole_hour_offset,
+            best_whole_hour_error_minutes: best_whole_hour_error,
+            best_half_hour_offset_minutes: best_half_hour_offset,
+            best_half_hour_error_minutes: best_half_hour_error,
+            best_quarter_hour_offset_minutes: best_quarter_hour_offset,
+            best_quarter_hour_error_minutes: best_quarter_hour_error,
+        });
+    }
+
+    let total_population_f64 = total_population as f64;
+    Ok(OffsetFitReport {
+        input_id: input.input_id.clone(),
+        unit_count: input.units.len(),
+        total_population,
+        current_weighted_mean_standard_error_minutes: current_standard_weighted_error
+            / total_population_f64,
+        current_weighted_mean_dst_error_minutes: current_dst_weighted_error / total_population_f64,
+        best_whole_hour_weighted_mean_error_minutes: whole_hour_weighted_error
+            / total_population_f64,
+        best_half_hour_weighted_mean_error_minutes: half_hour_weighted_error / total_population_f64,
+        best_quarter_hour_weighted_mean_error_minutes: quarter_hour_weighted_error
+            / total_population_f64,
+        units_improved_by_whole_hour_count,
+        units_improved_by_half_hour_count,
+        units_improved_by_quarter_hour_count,
+        unit_scores,
+    })
+}
+
+fn best_candidate_offset(solar_offset_minutes: f64, step_minutes: i32) -> (i32, f64) {
+    (-14 * 60..=14 * 60)
+        .step_by(step_minutes as usize)
+        .map(|offset| (offset, offset_error_minutes(solar_offset_minutes, offset)))
+        .min_by(|(left_offset, left_error), (right_offset, right_error)| {
+            left_error
+                .partial_cmp(right_error)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| left_offset.abs().cmp(&right_offset.abs()))
+        })
+        .expect("candidate offset range is non-empty")
+}
+
+fn offset_error_minutes(solar_offset_minutes: f64, utc_offset_minutes: i32) -> f64 {
+    (solar_offset_minutes - utc_offset_minutes as f64).abs()
 }
 
 fn summarize_zones(unit_scores: &[ZoneUnitScore]) -> Vec<ZoneSummary> {
@@ -2413,6 +2549,41 @@ mod tests {
         let report = evaluate_zone_plan_input(&input).unwrap();
 
         assert_eq!(report.unit_count, 4);
+    }
+
+    #[test]
+    fn offset_fit_compares_current_dst_and_candidate_offsets() {
+        let report = evaluate_offset_fit(&seed_plan_input(), 60).unwrap();
+
+        assert_eq!(report.input_id, "zones-seed-plan-input");
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.total_population, 340);
+        assert!(
+            (report.current_weighted_mean_standard_error_minutes - 6.617647058823529).abs() < 1e-9
+        );
+        assert!((report.current_weighted_mean_dst_error_minutes - 53.38235294117647).abs() < 1e-9);
+        assert_eq!(report.units_improved_by_whole_hour_count, 0);
+        assert_eq!(report.units_improved_by_half_hour_count, 0);
+        assert_eq!(report.units_improved_by_quarter_hour_count, 2);
+        assert_eq!(report.unit_scores[1].unit_id, "west-b");
+        assert_eq!(report.unit_scores[1].current_standard_error_minutes, 15.0);
+        assert_eq!(report.unit_scores[1].current_dst_error_minutes, 45.0);
+        assert_eq!(report.unit_scores[1].best_whole_hour_offset_minutes, -360);
+        assert_eq!(report.unit_scores[1].best_half_hour_offset_minutes, -330);
+        assert_eq!(report.unit_scores[1].best_quarter_hour_offset_minutes, -345);
+        assert_eq!(report.unit_scores[1].best_quarter_hour_error_minutes, 0.0);
+    }
+
+    #[test]
+    fn offset_fit_can_score_no_dst_scenarios() {
+        let report = evaluate_offset_fit(&seed_plan_input(), 0).unwrap();
+
+        assert!(
+            (report.current_weighted_mean_dst_error_minutes
+                - report.current_weighted_mean_standard_error_minutes)
+                .abs()
+                < 1e-9
+        );
     }
 
     #[test]

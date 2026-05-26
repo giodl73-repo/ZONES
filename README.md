@@ -80,6 +80,10 @@ metadata, population, and representative-point claims.
 `data/module-boundaries/zones-rplan-rline.json` records which responsibilities
 belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 
+`offset-fit` compares current assigned offsets against the nearest whole-hour,
+half-hour, and quarter-hour offset for each unit. It also reports DST-shifted
+clock error with a configurable `--dst-delta-minutes` value.
+
 ## Non-goals
 
 - ZONES is not a legal time-zone authority.
