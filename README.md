@@ -88,6 +88,8 @@ clock error with a configurable `--dst-delta-minutes` value.
 `write-offset-maps` uses the Rust SVG renderer to write schematic maps for
 current standard time, current DST-period clock time, and best whole-hour,
 half-hour, and quarter-hour options.
+`write-offset-atlas` writes those maps plus a local `index.html` comparison
+page.
 
 ## Non-goals
 

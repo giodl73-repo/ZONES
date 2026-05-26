@@ -63,6 +63,14 @@ enum Command {
         #[arg(long, default_value = "target/zones/maps")]
         output_dir: PathBuf,
     },
+    WriteOffsetAtlas {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        dst_delta_minutes: i32,
+        #[arg(long, default_value = "target/zones/offset-atlas")]
+        output_dir: PathBuf,
+    },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
@@ -193,6 +201,38 @@ fn main() -> Result<()> {
                 println!("{}", path.display());
             }
         }
+        Command::WriteOffsetAtlas {
+            path,
+            dst_delta_minutes,
+            output_dir,
+        } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = evaluate_offset_fit(&input, dst_delta_minutes)?;
+            fs::create_dir_all(&output_dir).with_context(|| {
+                format!("failed to create output directory {}", output_dir.display())
+            })?;
+            let mut map_files = Vec::new();
+            for view in offset_map_views() {
+                let file_name = format!("{}.svg", view.slug());
+                let svg = zones_core::render_offset_fit_svg(
+                    &report,
+                    view,
+                    &OffsetMapRenderOptions::default(),
+                );
+                let path = output_dir.join(&file_name);
+                fs::write(&path, svg)
+                    .with_context(|| format!("failed to write {}", path.display()))?;
+                map_files.push((view, file_name));
+                println!("{}", path.display());
+            }
+            let index_path = output_dir.join("index.html");
+            fs::write(&index_path, render_offset_atlas_html(&report, &map_files))
+                .with_context(|| format!("failed to write {}", index_path.display()))?;
+            println!("{}", index_path.display());
+        }
         Command::WriteEvaluation {
             path,
             source_manifest,
@@ -311,6 +351,126 @@ fn offset_map_views() -> [OffsetMapView; 5] {
         OffsetMapView::BestHalfHour,
         OffsetMapView::BestQuarterHour,
     ]
+}
+
+fn render_offset_atlas_html(
+    report: &zones_core::OffsetFitReport,
+    map_files: &[(OffsetMapView, String)],
+) -> String {
+    let mut cards = String::new();
+    for (view, file_name) in map_files {
+        cards.push_str(&format!(
+            "<section class=\"map-card\"><h2>{}</h2><object data=\"{}\" type=\"image/svg+xml\"></object></section>\n",
+            html_escape(view.title()),
+            html_escape(file_name)
+        ));
+    }
+    format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZONES Offset Atlas</title>
+<style>
+:root {{
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}}
+body {{
+  margin: 0;
+}}
+header {{
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid #cbd5e1;
+  background: #ffffff;
+}}
+h1 {{
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.15;
+}}
+.summary {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}}
+.metric {{
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}}
+.metric strong {{
+  display: block;
+  font-size: 18px;
+}}
+.metric span {{
+  color: #475569;
+  font-size: 12px;
+}}
+main {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 18px;
+  padding: 20px;
+}}
+.map-card {{
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}}
+.map-card h2 {{
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}}
+object {{
+  width: 100%;
+  min-height: 320px;
+  display: block;
+}}
+</style>
+</head>
+<body>
+<header>
+<h1>ZONES Offset Atlas</h1>
+<div>Input <code>{}</code>. Schematic maps compare current assigned offsets with candidate offset grids.</div>
+<div class="summary">
+<div class="metric"><strong>{:.1}</strong><span>current standard mean error</span></div>
+<div class="metric"><strong>{:.1}</strong><span>DST-period mean error</span></div>
+<div class="metric"><strong>{:.1}</strong><span>best whole-hour mean error</span></div>
+<div class="metric"><strong>{:.1}</strong><span>best half-hour mean error</span></div>
+<div class="metric"><strong>{:.1}</strong><span>best quarter-hour mean error</span></div>
+</div>
+</header>
+<main>
+{}
+</main>
+</body>
+</html>
+"#,
+        html_escape(&report.input_id),
+        report.current_weighted_mean_standard_error_minutes,
+        report.current_weighted_mean_dst_error_minutes,
+        report.best_whole_hour_weighted_mean_error_minutes,
+        report.best_half_hour_weighted_mean_error_minutes,
+        report.best_quarter_hour_weighted_mean_error_minutes,
+        cards
+    )
+}
+
+fn html_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn write_json<T: serde::Serialize>(path: &PathBuf, value: &T) -> Result<()> {
