@@ -55,6 +55,28 @@ pub struct SourceManifestReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ZoneCatalog {
+    pub catalog_id: String,
+    pub source_manifest_id: String,
+    pub generated_on: String,
+    pub zones: Vec<ZoneSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ZoneCatalogReport {
+    pub catalog_id: String,
+    pub zone_count: usize,
+    pub whole_hour_offset_count: usize,
+    pub non_whole_hour_offset_count: usize,
+    pub half_hour_offset_count: usize,
+    pub quarter_hour_offset_count: usize,
+    pub min_utc_offset_minutes: i32,
+    pub max_utc_offset_minutes: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TemporalExtent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub valid_from: Option<String>,
@@ -334,6 +356,52 @@ impl SourceManifest {
             }
         }
         Ok(report)
+    }
+}
+
+impl ZoneCatalog {
+    pub fn validate(&self) -> Result<(), ZonePlanError> {
+        validate_non_empty_plan("zone_catalog.catalog_id", &self.catalog_id)?;
+        validate_non_empty_plan("zone_catalog.source_manifest_id", &self.source_manifest_id)?;
+        validate_non_empty_plan("zone_catalog.generated_on", &self.generated_on)?;
+        validate_zones(&self.zones)
+    }
+
+    pub fn report(&self) -> Result<ZoneCatalogReport, ZonePlanError> {
+        self.validate()?;
+        let mut whole_hour_offset_count = 0;
+        let mut non_whole_hour_offset_count = 0;
+        let mut half_hour_offset_count = 0;
+        let mut quarter_hour_offset_count = 0;
+        let mut min_utc_offset_minutes = i32::MAX;
+        let mut max_utc_offset_minutes = i32::MIN;
+        for zone in &self.zones {
+            let offset = zone.utc_offset_minutes;
+            min_utc_offset_minutes = min_utc_offset_minutes.min(offset);
+            max_utc_offset_minutes = max_utc_offset_minutes.max(offset);
+            if offset % 60 == 0 {
+                whole_hour_offset_count += 1;
+            } else {
+                non_whole_hour_offset_count += 1;
+            }
+            if offset % 60 == 30 || offset % 60 == -30 {
+                half_hour_offset_count += 1;
+            }
+            if offset % 60 == 15 || offset % 60 == 45 || offset % 60 == -15 || offset % 60 == -45 {
+                quarter_hour_offset_count += 1;
+            }
+        }
+
+        Ok(ZoneCatalogReport {
+            catalog_id: self.catalog_id.clone(),
+            zone_count: self.zones.len(),
+            whole_hour_offset_count,
+            non_whole_hour_offset_count,
+            half_hour_offset_count,
+            quarter_hour_offset_count,
+            min_utc_offset_minutes,
+            max_utc_offset_minutes,
+        })
     }
 }
 
@@ -891,14 +959,7 @@ fn validate_inputs(
     if plan.zones.is_empty() {
         return Err(ZonePlanError::EmptyZones);
     }
-    for zone in &plan.zones {
-        if !(-14 * 60..=14 * 60).contains(&zone.utc_offset_minutes) {
-            return Err(ZonePlanError::InvalidZoneUtcOffset {
-                zone_id: zone.id.clone(),
-                utc_offset_minutes: zone.utc_offset_minutes,
-            });
-        }
-    }
+    validate_zones(&plan.zones)?;
     if units.len() != plan.assignment.len() {
         return Err(ZonePlanError::UnitAssignmentMismatch {
             unit_count: units.len(),
@@ -989,6 +1050,21 @@ fn validate_non_empty_plan(kind: &'static str, value: &str) -> Result<(), ZonePl
     } else {
         Ok(())
     }
+}
+
+fn validate_zones(zones: &[ZoneSpec]) -> Result<(), ZonePlanError> {
+    if zones.is_empty() {
+        return Err(ZonePlanError::EmptyZones);
+    }
+    for zone in zones {
+        if !(-14 * 60..=14 * 60).contains(&zone.utc_offset_minutes) {
+            return Err(ZonePlanError::InvalidZoneUtcOffset {
+                zone_id: zone.id.clone(),
+                utc_offset_minutes: zone.utc_offset_minutes,
+            });
+        }
+    }
+    Ok(())
 }
 
 pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
@@ -1104,6 +1180,40 @@ pub fn seed_source_manifest() -> SourceManifest {
                 content_hash: None,
                 caveats: vec!["IANA tzdb does not record complete legal boundaries.".to_string()],
             },
+        ],
+    }
+}
+
+pub fn seed_zone_catalog() -> ZoneCatalog {
+    ZoneCatalog {
+        catalog_id: "zones-seed-offset-catalog".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        zones: vec![
+            ZoneSpec {
+                id: "utc-minus-08-00".to_string(),
+                utc_offset_minutes: -480,
+            },
+            ZoneSpec {
+                id: "utc-minus-06-00".to_string(),
+                utc_offset_minutes: -360,
+            },
+            ZoneSpec {
+                id: "utc-minus-05-00".to_string(),
+                utc_offset_minutes: -300,
+            },
+            ZoneSpec {
+                id: "utc-plus-05-30".to_string(),
+                utc_offset_minutes: 330,
+            },
+            ZoneSpec {
+                id: "utc-plus-05-45".to_string(),
+                utc_offset_minutes: 345,
+            },
+        ],
+        caveats: vec![
+            "Seed offset catalog for validation only; not a complete legal time-zone catalog."
+                .to_string(),
         ],
     }
 }
@@ -1526,6 +1636,31 @@ mod tests {
         assert_eq!(report.geospatial_boundary_count, 1);
         assert_eq!(report.time_rule_database_count, 1);
         assert_eq!(report.representative_point_count, 1);
+    }
+
+    #[test]
+    fn seed_zone_catalog_reports_non_whole_hour_offsets() {
+        let report = seed_zone_catalog().report().unwrap();
+
+        assert_eq!(report.catalog_id, "zones-seed-offset-catalog");
+        assert_eq!(report.zone_count, 5);
+        assert_eq!(report.whole_hour_offset_count, 3);
+        assert_eq!(report.non_whole_hour_offset_count, 2);
+        assert_eq!(report.half_hour_offset_count, 1);
+        assert_eq!(report.quarter_hour_offset_count, 1);
+        assert_eq!(report.min_utc_offset_minutes, -480);
+        assert_eq!(report.max_utc_offset_minutes, 345);
+    }
+
+    #[test]
+    fn committed_zone_catalog_matches_seed_catalog() {
+        let catalog: ZoneCatalog = serde_json::from_str(include_str!(
+            "../../../data/zone-catalogs/seed-offsets.json"
+        ))
+        .unwrap();
+
+        assert_eq!(catalog, seed_zone_catalog());
+        assert!(catalog.report().is_ok());
     }
 
     #[test]

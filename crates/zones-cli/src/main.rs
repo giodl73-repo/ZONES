@@ -3,7 +3,8 @@ use clap::{Parser, Subcommand};
 use std::{fs, path::PathBuf};
 use zones_core::{
     evaluate_zone_plan, evaluate_zone_plan_evaluation, evaluate_zone_plan_input_with_manifest,
-    seed_fixture, seed_plan_input, seed_source_manifest, SourceManifest, ZonePlanInput,
+    seed_fixture, seed_plan_input, seed_source_manifest, seed_zone_catalog, SourceManifest,
+    ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -46,6 +47,11 @@ enum Command {
     SeedSources,
     SourceReport {
         #[arg(default_value = "data/source-manifests/us-foundation.json")]
+        path: PathBuf,
+    },
+    SeedZoneCatalog,
+    ZoneCatalogReport {
+        #[arg(default_value = "data/zone-catalogs/seed-offsets.json")]
         path: PathBuf,
     },
 }
@@ -107,6 +113,18 @@ fn main() -> Result<()> {
             let manifest: SourceManifest = serde_json::from_slice(&bytes)
                 .with_context(|| format!("failed to parse source manifest {}", path.display()))?;
             let report = manifest.report()?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedZoneCatalog => {
+            let catalog = seed_zone_catalog();
+            println!("{}", serde_json::to_string_pretty(&catalog)?);
+        }
+        Command::ZoneCatalogReport { path } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let catalog: ZoneCatalog = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = catalog.report()?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
     }

@@ -1,0 +1,30 @@
+{
+  "catalog_id": "zones-seed-offset-catalog",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-26",
+  "zones": [
+    {
+      "id": "utc-minus-08-00",
+      "utc_offset_minutes": -480
+    },
+    {
+      "id": "utc-minus-06-00",
+      "utc_offset_minutes": -360
+    },
+    {
+      "id": "utc-minus-05-00",
+      "utc_offset_minutes": -300
+    },
+    {
+      "id": "utc-plus-05-30",
+      "utc_offset_minutes": 330
+    },
+    {
+      "id": "utc-plus-05-45",
+      "utc_offset_minutes": 345
+    }
+  ],
+  "caveats": [
+    "Seed offset catalog for validation only; not a complete legal time-zone catalog."
+  ]
+}

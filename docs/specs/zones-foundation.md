@@ -131,6 +131,11 @@ the DST period; globally this must not be hardcoded because daylight-saving
 deltas and transition rules vary. Later specs may add seasonal sunrise/sunset
 exposure metrics, but those must be named separately from standard solar error.
 
+Zone catalogs are analysis inputs, not universal legal truth. A catalog should
+name its source manifest, generation date, offsets in minutes, and caveats. The
+seed catalog exists only to prove the representation of whole-hour, half-hour,
+and 45-minute offsets.
+
 Later reports may add:
 
 - population moved from current legal zone,
@@ -199,6 +204,7 @@ cargo run -p zones-cli -- evaluate-plan
 cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
+cargo run -p zones-cli -- zone-catalog-report
 git diff --check
 ```
 

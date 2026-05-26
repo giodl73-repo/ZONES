@@ -46,6 +46,7 @@ cargo run -p zones-cli -- evaluate-plan
 cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
+cargo run -p zones-cli -- zone-catalog-report
 ```
 
 The seed report runs a tiny four-county fixture through the first plan evaluator.
@@ -59,6 +60,9 @@ under `target/` by default and are intentionally not committed. `write-evaluatio
 writes a full JSON packet, a per-unit CSV score table, and a per-zone summary
 CSV. When a plan input includes `reference_assignment`, reports include moved
 unit and moved population counts against that reference.
+
+The seed zone catalog proves ZONES can represent whole-hour, half-hour, and
+45-minute offsets. It is not a complete list of legal time zones.
 
 ## Non-goals
 
