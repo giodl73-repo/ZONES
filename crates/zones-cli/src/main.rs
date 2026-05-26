@@ -90,6 +90,10 @@ enum Command {
         require_all_units: bool,
         #[arg(long, default_value = "target/zones/plan-with-geometries.json")]
         output: PathBuf,
+        #[arg(long, default_value = "target/zones/geometry-join-report.json")]
+        report: PathBuf,
+        #[arg(long, default_value = "target/zones/geometry-join-units.csv")]
+        unit_status_csv: PathBuf,
     },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
@@ -282,6 +286,8 @@ fn main() -> Result<()> {
             unit_id_property,
             require_all_units,
             output,
+            report: report_path,
+            unit_status_csv,
         } => {
             let bytes =
                 fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
@@ -289,7 +295,7 @@ fn main() -> Result<()> {
                 .with_context(|| format!("failed to parse {}", path.display()))?;
             let geojson_text = fs::read_to_string(&geojson)
                 .with_context(|| format!("failed to read {}", geojson.display()))?;
-            let report = attach_geojson_geometries(
+            let join_report = attach_geojson_geometries(
                 &input,
                 &geojson_text,
                 &GeometryJoinOptions {
@@ -297,13 +303,17 @@ fn main() -> Result<()> {
                     require_all_units,
                 },
             )?;
-            write_json(&output, &report.input)?;
+            write_json(&output, &join_report.input)?;
+            write_json(&report_path, &join_report)?;
+            write_geometry_join_units_csv(&unit_status_csv, &join_report.unit_statuses)?;
             println!("{}", output.display());
+            println!("{}", report_path.display());
+            println!("{}", unit_status_csv.display());
             eprintln!(
                 "matched {} units; {} unmatched units; {} unused features",
-                report.matched_unit_count,
-                report.unmatched_unit_ids.len(),
-                report.unused_feature_unit_ids.len()
+                join_report.matched_unit_count,
+                join_report.unmatched_unit_ids.len(),
+                join_report.unused_feature_unit_ids.len()
             );
         }
         Command::WriteEvaluation {
@@ -649,6 +659,27 @@ fn write_offset_fit_units_csv(
             score.best_half_hour_error_minutes,
             score.best_quarter_hour_offset_minutes,
             score.best_quarter_hour_error_minutes,
+        ));
+    }
+    fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(())
+}
+
+fn write_geometry_join_units_csv(
+    path: &PathBuf,
+    statuses: &[zones_core::GeometryJoinUnitStatus],
+) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create output directory {}", parent.display()))?;
+    }
+    let mut csv = String::from("unit_id,matched,geometry_type\n");
+    for status in statuses {
+        csv.push_str(&format!(
+            "{},{},{}\n",
+            csv_cell(&status.unit_id),
+            status.matched,
+            csv_cell(status.geometry_type.as_deref().unwrap_or(""))
         ));
     }
     fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;

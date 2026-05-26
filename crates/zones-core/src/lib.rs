@@ -1024,6 +1024,16 @@ pub enum MapGeometry {
     MultiPolygon(Vec<Vec<Vec<[f64; 2]>>>),
 }
 
+impl MapGeometry {
+    pub fn geometry_type(&self) -> &'static str {
+        match self {
+            Self::Point(_) => "Point",
+            Self::Polygon(_) => "Polygon",
+            Self::MultiPolygon(_) => "MultiPolygon",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoundaryUnit {
     pub id: String,
@@ -1101,7 +1111,16 @@ pub struct GeometryJoinReport {
     pub matched_unit_count: usize,
     pub unmatched_unit_ids: Vec<String>,
     pub unused_feature_unit_ids: Vec<String>,
+    pub unit_statuses: Vec<GeometryJoinUnitStatus>,
     pub input: ZonePlanInput,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GeometryJoinUnitStatus {
+    pub unit_id: String,
+    pub matched: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geometry_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -1481,12 +1500,24 @@ pub fn attach_geojson_geometries(
         .collect::<BTreeSet<_>>();
     let mut matched_unit_count = 0;
     let mut unmatched_unit_ids = Vec::new();
+    let mut unit_statuses = Vec::new();
     for unit in &mut joined.units {
         if let Some(geometry) = geometries_by_unit_id.remove(&unit.id) {
+            let geometry_type = geometry.geometry_type().to_string();
             unit.map_geometry = Some(geometry);
             matched_unit_count += 1;
+            unit_statuses.push(GeometryJoinUnitStatus {
+                unit_id: unit.id.clone(),
+                matched: true,
+                geometry_type: Some(geometry_type),
+            });
         } else {
             unmatched_unit_ids.push(unit.id.clone());
+            unit_statuses.push(GeometryJoinUnitStatus {
+                unit_id: unit.id.clone(),
+                matched: false,
+                geometry_type: None,
+            });
         }
     }
 
@@ -1505,6 +1536,7 @@ pub fn attach_geojson_geometries(
         matched_unit_count,
         unmatched_unit_ids,
         unused_feature_unit_ids,
+        unit_statuses,
         input: joined,
     })
 }
@@ -3336,6 +3368,15 @@ mod tests {
         assert_eq!(report.matched_unit_count, 4);
         assert!(report.unmatched_unit_ids.is_empty());
         assert!(report.unused_feature_unit_ids.is_empty());
+        assert_eq!(report.unit_statuses.len(), 4);
+        assert_eq!(
+            report.unit_statuses[0],
+            GeometryJoinUnitStatus {
+                unit_id: "west-a".to_string(),
+                matched: true,
+                geometry_type: Some("Polygon".to_string()),
+            }
+        );
         assert!(matches!(
             report.input.units[0].map_geometry,
             Some(MapGeometry::Polygon(_))
