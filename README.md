@@ -85,6 +85,9 @@ half-hour, and quarter-hour offset for each unit. It also reports DST-shifted
 clock error with a configurable `--dst-delta-minutes` value.
 `write-offset-fit` writes the same report plus a ranked per-unit CSV under
 `target/zones/` by default.
+`write-offset-maps` uses the Rust SVG renderer to write schematic maps for
+current standard time, current DST-period clock time, and best whole-hour,
+half-hour, and quarter-hour options.
 
 ## Non-goals
 

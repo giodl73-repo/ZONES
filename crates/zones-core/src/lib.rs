@@ -1151,6 +1151,53 @@ pub struct OffsetFitReport {
     pub unit_scores: Vec<OffsetFitUnitScore>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OffsetMapView {
+    CurrentStandard,
+    CurrentDst,
+    BestWholeHour,
+    BestHalfHour,
+    BestQuarterHour,
+}
+
+impl OffsetMapView {
+    pub fn slug(self) -> &'static str {
+        match self {
+            Self::CurrentStandard => "current-standard",
+            Self::CurrentDst => "current-dst",
+            Self::BestWholeHour => "best-whole-hour",
+            Self::BestHalfHour => "best-half-hour",
+            Self::BestQuarterHour => "best-quarter-hour",
+        }
+    }
+
+    pub fn title(self) -> &'static str {
+        match self {
+            Self::CurrentStandard => "Current standard-time offset error",
+            Self::CurrentDst => "Current DST-period clock error",
+            Self::BestWholeHour => "Best whole-hour offset error",
+            Self::BestHalfHour => "Best half-hour offset error",
+            Self::BestQuarterHour => "Best quarter-hour offset error",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OffsetMapRenderOptions {
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Default for OffsetMapRenderOptions {
+    fn default() -> Self {
+        Self {
+            width: 960,
+            height: 560,
+        }
+    }
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ZonePlanError {
     #[error("unit count {unit_count} does not match plan assignment count {assignment_count}")]
@@ -1454,6 +1501,207 @@ pub fn evaluate_offset_fit(
         units_improved_by_quarter_hour_count,
         unit_scores,
     })
+}
+
+pub fn render_offset_fit_svg(
+    report: &OffsetFitReport,
+    view: OffsetMapView,
+    options: &OffsetMapRenderOptions,
+) -> String {
+    let width = options.width.max(640);
+    let height = options.height.max(360);
+    let left = 72.0;
+    let right = 44.0;
+    let top = 92.0;
+    let bottom = 92.0;
+    let plot_width = width as f64 - left - right;
+    let plot_height = height as f64 - top - bottom;
+    let min_offset = report
+        .unit_scores
+        .iter()
+        .map(|score| score.solar_offset_minutes)
+        .fold(f64::INFINITY, f64::min)
+        .floor()
+        - 30.0;
+    let max_offset = report
+        .unit_scores
+        .iter()
+        .map(|score| score.solar_offset_minutes)
+        .fold(f64::NEG_INFINITY, f64::max)
+        .ceil()
+        + 30.0;
+    let max_error = report
+        .unit_scores
+        .iter()
+        .map(|score| offset_map_error(score, view))
+        .fold(0.0_f64, f64::max)
+        .max(1.0);
+    let max_population = report
+        .unit_scores
+        .iter()
+        .map(|score| score.population)
+        .max()
+        .unwrap_or(1) as f64;
+
+    let mut svg = String::new();
+    svg.push_str(&format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {width} {height}\" role=\"img\" aria-labelledby=\"title desc\">\n"
+    ));
+    svg.push_str(&format!(
+        "<title>{}</title>\n<desc>Schematic offset-fit map for {} units. X position is solar offset; color is absolute clock error.</desc>\n",
+        escape_xml(view.title()),
+        report.unit_count
+    ));
+    svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#f8fafc\"/>\n");
+    svg.push_str(&format!(
+        "<text x=\"32\" y=\"42\" font-family=\"system-ui, sans-serif\" font-size=\"24\" font-weight=\"700\" fill=\"#111827\">{}</text>\n",
+        escape_xml(view.title())
+    ));
+    svg.push_str(&format!(
+        "<text x=\"32\" y=\"68\" font-family=\"system-ui, sans-serif\" font-size=\"13\" fill=\"#475569\">input: {} | schematic until geometry-backed boundaries are available</text>\n",
+        escape_xml(&report.input_id)
+    ));
+    svg.push_str(&format!(
+        "<line x1=\"{left}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"#cbd5e1\" stroke-width=\"1\"/>\n",
+        height as f64 - bottom,
+        width as f64 - right,
+        height as f64 - bottom
+    ));
+    svg.push_str(&format!(
+        "<text x=\"{}\" y=\"{}\" font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#475569\">solar offset minutes from UTC</text>\n",
+        left,
+        height as f64 - 28.0
+    ));
+
+    for marker in offset_axis_markers(min_offset, max_offset) {
+        let x = scale(
+            marker as f64,
+            min_offset,
+            max_offset,
+            left,
+            left + plot_width,
+        );
+        svg.push_str(&format!(
+            "<line x1=\"{x:.2}\" y1=\"{top}\" x2=\"{x:.2}\" y2=\"{}\" stroke=\"#e2e8f0\" stroke-width=\"1\"/>\n",
+            height as f64 - bottom
+        ));
+        svg.push_str(&format!(
+            "<text x=\"{x:.2}\" y=\"{}\" text-anchor=\"middle\" font-family=\"system-ui, sans-serif\" font-size=\"11\" fill=\"#64748b\">{}</text>\n",
+            height as f64 - bottom + 20.0,
+            format_offset(marker)
+        ));
+    }
+
+    let row_count = report.unit_scores.len().max(1);
+    for (index, score) in report.unit_scores.iter().enumerate() {
+        let x = scale(
+            score.solar_offset_minutes,
+            min_offset,
+            max_offset,
+            left,
+            left + plot_width,
+        );
+        let y = top + ((index + 1) as f64 * plot_height / (row_count + 1) as f64);
+        let radius = 10.0 + 14.0 * ((score.population as f64 / max_population).sqrt());
+        let error = offset_map_error(score, view);
+        let offset = offset_map_offset(score, view);
+        let color = error_color(error, max_error);
+        svg.push_str(&format!(
+            "<circle cx=\"{x:.2}\" cy=\"{y:.2}\" r=\"{radius:.2}\" fill=\"{color}\" stroke=\"#0f172a\" stroke-width=\"1.2\">\n<title>{}: offset {}, error {:.1} min</title>\n</circle>\n",
+            escape_xml(&score.unit_name),
+            format_offset(offset),
+            error
+        ));
+        svg.push_str(&format!(
+            "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#111827\">{}</text>\n",
+            x + radius + 6.0,
+            y + 4.0,
+            escape_xml(&score.unit_id)
+        ));
+    }
+
+    let legend_x = width as f64 - 260.0;
+    let legend_y = 96.0;
+    svg.push_str(&format!(
+        "<g font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#334155\">\n<text x=\"{legend_x}\" y=\"{legend_y}\" font-weight=\"700\">Error color</text>\n"
+    ));
+    for (index, (label, color)) in [
+        ("low", "#2563eb"),
+        ("medium", "#f59e0b"),
+        ("high", "#dc2626"),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let y = legend_y + 22.0 + index as f64 * 22.0;
+        svg.push_str(&format!(
+            "<rect x=\"{legend_x}\" y=\"{}\" width=\"16\" height=\"16\" rx=\"3\" fill=\"{color}\"/><text x=\"{}\" y=\"{}\">{}</text>\n",
+            y - 12.0,
+            legend_x + 24.0,
+            y + 1.0,
+            label
+        ));
+    }
+    svg.push_str("</g>\n</svg>\n");
+    svg
+}
+
+fn offset_map_offset(score: &OffsetFitUnitScore, view: OffsetMapView) -> i32 {
+    match view {
+        OffsetMapView::CurrentStandard => score.current_standard_offset_minutes,
+        OffsetMapView::CurrentDst => score.current_dst_offset_minutes,
+        OffsetMapView::BestWholeHour => score.best_whole_hour_offset_minutes,
+        OffsetMapView::BestHalfHour => score.best_half_hour_offset_minutes,
+        OffsetMapView::BestQuarterHour => score.best_quarter_hour_offset_minutes,
+    }
+}
+
+fn offset_map_error(score: &OffsetFitUnitScore, view: OffsetMapView) -> f64 {
+    match view {
+        OffsetMapView::CurrentStandard => score.current_standard_error_minutes,
+        OffsetMapView::CurrentDst => score.current_dst_error_minutes,
+        OffsetMapView::BestWholeHour => score.best_whole_hour_error_minutes,
+        OffsetMapView::BestHalfHour => score.best_half_hour_error_minutes,
+        OffsetMapView::BestQuarterHour => score.best_quarter_hour_error_minutes,
+    }
+}
+
+fn offset_axis_markers(min_offset: f64, max_offset: f64) -> Vec<i32> {
+    let start = ((min_offset / 60.0).ceil() as i32) * 60;
+    let end = ((max_offset / 60.0).floor() as i32) * 60;
+    (start..=end).step_by(60).collect()
+}
+
+fn scale(value: f64, input_min: f64, input_max: f64, output_min: f64, output_max: f64) -> f64 {
+    if (input_max - input_min).abs() < f64::EPSILON {
+        return (output_min + output_max) / 2.0;
+    }
+    output_min + ((value - input_min) / (input_max - input_min)) * (output_max - output_min)
+}
+
+fn error_color(error: f64, max_error: f64) -> &'static str {
+    let ratio = error / max_error;
+    if ratio >= 0.67 {
+        "#dc2626"
+    } else if ratio >= 0.34 {
+        "#f59e0b"
+    } else {
+        "#2563eb"
+    }
+}
+
+fn format_offset(offset_minutes: i32) -> String {
+    let sign = if offset_minutes < 0 { "-" } else { "+" };
+    let absolute = offset_minutes.abs();
+    format!("UTC{sign}{:02}:{:02}", absolute / 60, absolute % 60)
+}
+
+fn escape_xml(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn best_candidate_offset(solar_offset_minutes: f64, step_minutes: i32) -> (i32, f64) {
@@ -2584,6 +2832,26 @@ mod tests {
                 .abs()
                 < 1e-9
         );
+    }
+
+    #[test]
+    fn offset_fit_svg_renders_each_option_view() {
+        let report = evaluate_offset_fit(&seed_plan_input(), 60).unwrap();
+
+        for view in [
+            OffsetMapView::CurrentStandard,
+            OffsetMapView::CurrentDst,
+            OffsetMapView::BestWholeHour,
+            OffsetMapView::BestHalfHour,
+            OffsetMapView::BestQuarterHour,
+        ] {
+            let svg = render_offset_fit_svg(&report, view, &OffsetMapRenderOptions::default());
+
+            assert!(svg.contains("<svg"));
+            assert!(svg.contains(view.title()));
+            assert!(svg.contains("west-b"));
+            assert!(svg.contains("UTC-05:45") || view != OffsetMapView::BestQuarterHour);
+        }
     }
 
     #[test]

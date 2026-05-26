@@ -6,7 +6,8 @@ use zones_core::{
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_source_limitation_matrix,
     seed_source_manifest, seed_temporal_dataset, seed_zone_catalog, ModuleBoundaryContract,
-    SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
+    OffsetMapRenderOptions, OffsetMapView, SourceLimitationMatrix, SourceManifest, TemporalDataset,
+    ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -53,6 +54,14 @@ enum Command {
         output: PathBuf,
         #[arg(long, default_value = "target/zones/seed-offset-fit-units.csv")]
         unit_scores_csv: PathBuf,
+    },
+    WriteOffsetMaps {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        dst_delta_minutes: i32,
+        #[arg(long, default_value = "target/zones/maps")]
+        output_dir: PathBuf,
     },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
@@ -158,6 +167,31 @@ fn main() -> Result<()> {
             write_offset_fit_units_csv(&unit_scores_csv, &report.unit_scores)?;
             println!("{}", output.display());
             println!("{}", unit_scores_csv.display());
+        }
+        Command::WriteOffsetMaps {
+            path,
+            dst_delta_minutes,
+            output_dir,
+        } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = evaluate_offset_fit(&input, dst_delta_minutes)?;
+            fs::create_dir_all(&output_dir).with_context(|| {
+                format!("failed to create output directory {}", output_dir.display())
+            })?;
+            for view in offset_map_views() {
+                let svg = zones_core::render_offset_fit_svg(
+                    &report,
+                    view,
+                    &OffsetMapRenderOptions::default(),
+                );
+                let path = output_dir.join(format!("{}.svg", view.slug()));
+                fs::write(&path, svg)
+                    .with_context(|| format!("failed to write {}", path.display()))?;
+                println!("{}", path.display());
+            }
         }
         Command::WriteEvaluation {
             path,
@@ -267,6 +301,16 @@ fn read_plan_manifest_and_catalog(
     let catalog: ZoneCatalog = serde_json::from_slice(&catalog_bytes)
         .with_context(|| format!("failed to parse zone catalog {}", zone_catalog.display()))?;
     Ok((input, manifest, catalog))
+}
+
+fn offset_map_views() -> [OffsetMapView; 5] {
+    [
+        OffsetMapView::CurrentStandard,
+        OffsetMapView::CurrentDst,
+        OffsetMapView::BestWholeHour,
+        OffsetMapView::BestHalfHour,
+        OffsetMapView::BestQuarterHour,
+    ]
 }
 
 fn write_json<T: serde::Serialize>(path: &PathBuf, value: &T) -> Result<()> {
