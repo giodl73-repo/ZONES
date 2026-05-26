@@ -1,7 +1,7 @@
 use rgraph_core::{assignment_label_connected, undirected_edge_cut, EdgeCutError};
 use rplan_core::RplanContext;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -550,11 +550,23 @@ pub struct ZoneUnitScore {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ZoneSummary {
+    pub zone_id: String,
+    pub unit_count: usize,
+    pub population: u64,
+    pub moved_unit_count: usize,
+    pub moved_population: u64,
+    pub weighted_mean_absolute_error_minutes: f64,
+    pub max_absolute_error_minutes: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZonePlanEvaluation {
     pub input_id: String,
     pub source_manifest_id: String,
     pub source_manifest_generated_on: String,
     pub plan_report: ZonePlanReport,
+    pub zone_summaries: Vec<ZoneSummary>,
     pub unit_scores: Vec<ZoneUnitScore>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub input_caveats: Vec<String>,
@@ -706,6 +718,7 @@ pub fn evaluate_zone_plan_evaluation(
     validate_input_manifest_pair(input, manifest)?;
     let plan_report = evaluate_zone_plan_input(input)?;
     let unit_scores = score_units(&input.units, &input.plan, &input.reference_assignment);
+    let zone_summaries = summarize_zones(&unit_scores);
     let source_caveats = manifest
         .sources
         .iter()
@@ -722,10 +735,53 @@ pub fn evaluate_zone_plan_evaluation(
         source_manifest_id: input.source_manifest_id.clone(),
         source_manifest_generated_on: manifest.generated_on.clone(),
         plan_report,
+        zone_summaries,
         unit_scores,
         input_caveats: input.caveats.clone(),
         source_caveats,
     })
+}
+
+fn summarize_zones(unit_scores: &[ZoneUnitScore]) -> Vec<ZoneSummary> {
+    #[derive(Default)]
+    struct Accumulator {
+        unit_count: usize,
+        population: u64,
+        moved_unit_count: usize,
+        moved_population: u64,
+        weighted_error: f64,
+        max_error: f64,
+    }
+
+    let mut by_zone = BTreeMap::<String, Accumulator>::new();
+    for score in unit_scores {
+        let entry = by_zone.entry(score.zone_id.clone()).or_default();
+        entry.unit_count += 1;
+        entry.population += score.population;
+        if score.moved_from_reference.unwrap_or(false) {
+            entry.moved_unit_count += 1;
+            entry.moved_population += score.population;
+        }
+        entry.weighted_error += score.absolute_error_minutes * score.population as f64;
+        entry.max_error = entry.max_error.max(score.absolute_error_minutes);
+    }
+
+    by_zone
+        .into_iter()
+        .map(|(zone_id, entry)| ZoneSummary {
+            zone_id,
+            unit_count: entry.unit_count,
+            population: entry.population,
+            moved_unit_count: entry.moved_unit_count,
+            moved_population: entry.moved_population,
+            weighted_mean_absolute_error_minutes: if entry.population == 0 {
+                0.0
+            } else {
+                entry.weighted_error / entry.population as f64
+            },
+            max_absolute_error_minutes: entry.max_error,
+        })
+        .collect()
 }
 
 fn validate_input_manifest_pair(
@@ -1117,6 +1173,18 @@ mod tests {
 
         assert_eq!(evaluation.input_id, "zones-seed-plan-input");
         assert_eq!(evaluation.source_manifest_id, "zones-us-foundation-sources");
+        assert_eq!(evaluation.zone_summaries.len(), 2);
+        assert_eq!(evaluation.zone_summaries[0].zone_id, "eastern");
+        assert_eq!(evaluation.zone_summaries[0].population, 160);
+        assert_eq!(evaluation.zone_summaries[0].moved_population, 0);
+        assert!(
+            (evaluation.zone_summaries[0].weighted_mean_absolute_error_minutes - 6.5625).abs()
+                < 1e-9
+        );
+        assert_eq!(
+            evaluation.zone_summaries[0].max_absolute_error_minutes,
+            15.0
+        );
         assert_eq!(evaluation.unit_scores.len(), 4);
         assert_eq!(evaluation.unit_scores[1].unit_id, "west-b");
         assert_eq!(evaluation.unit_scores[1].zone_id, "western");

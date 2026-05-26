@@ -19,7 +19,7 @@ time-zone plan against one or more candidate plans and emits:
 - population moved across current legal zones,
 - state/county boundary respect,
 - source and assumption notes,
-- JSON and CSV evaluation artifacts under ignored output paths.
+- JSON and per-unit/per-zone CSV evaluation artifacts under ignored output paths.
 
 ## Waves
 

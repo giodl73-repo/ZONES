@@ -40,6 +40,8 @@ enum Command {
         output: PathBuf,
         #[arg(long, default_value = "target/zones/seed-unit-scores.csv")]
         unit_scores_csv: PathBuf,
+        #[arg(long, default_value = "target/zones/seed-zone-summaries.csv")]
+        zone_summaries_csv: PathBuf,
     },
     SeedSources,
     SourceReport {
@@ -84,13 +86,16 @@ fn main() -> Result<()> {
             source_manifest,
             output,
             unit_scores_csv,
+            zone_summaries_csv,
         } => {
             let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
             let evaluation = evaluate_zone_plan_evaluation(&input, &manifest)?;
             write_json(&output, &evaluation)?;
             write_unit_scores_csv(&unit_scores_csv, &evaluation.unit_scores)?;
+            write_zone_summaries_csv(&zone_summaries_csv, &evaluation.zone_summaries)?;
             println!("{}", output.display());
             println!("{}", unit_scores_csv.display());
+            println!("{}", zone_summaries_csv.display());
         }
         Command::SeedSources => {
             let manifest = seed_source_manifest();
@@ -164,6 +169,30 @@ fn write_unit_scores_csv(path: &PathBuf, scores: &[zones_core::ZoneUnitScore]) -
             score.solar_offset_minutes,
             score.zone_utc_offset_minutes,
             score.absolute_error_minutes
+        ));
+    }
+    fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(())
+}
+
+fn write_zone_summaries_csv(path: &PathBuf, summaries: &[zones_core::ZoneSummary]) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create output directory {}", parent.display()))?;
+    }
+    let mut csv = String::from(
+        "zone_id,unit_count,population,moved_unit_count,moved_population,weighted_mean_absolute_error_minutes,max_absolute_error_minutes\n",
+    );
+    for summary in summaries {
+        csv.push_str(&format!(
+            "{},{},{},{},{},{},{}\n",
+            csv_cell(&summary.zone_id),
+            summary.unit_count,
+            summary.population,
+            summary.moved_unit_count,
+            summary.moved_population,
+            summary.weighted_mean_absolute_error_minutes,
+            summary.max_absolute_error_minutes
         ));
     }
     fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;

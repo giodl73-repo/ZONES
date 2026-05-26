@@ -110,9 +110,9 @@ plan file whose manifest identity does not match the supplied manifest.
 `evaluate-plan-detail` emits the same aggregate report plus per-unit error rows,
 input caveats, and source caveats so county baselines can publish both summary
 and inspection artifacts from the same input.
-`write-evaluation` writes that detailed packet plus a per-unit CSV score table
-to ignored `target/` paths by default; committed source fixtures and ignored
-generated outputs must remain separate.
+`write-evaluation` writes that detailed packet plus per-unit and per-zone CSV
+score tables to ignored `target/` paths by default; committed source fixtures
+and ignored generated outputs must remain separate.
 
 Foundation scoring uses minutes as the unit. A unit's **standard solar error**
 is:
