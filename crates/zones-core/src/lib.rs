@@ -714,6 +714,25 @@ pub enum ZonePlanError {
         input_source_manifest_id: String,
         manifest_id: String,
     },
+    #[error("zone catalog validation failed: {0}")]
+    ZoneCatalog(String),
+    #[error(
+        "zone catalog source_manifest_id {catalog_source_manifest_id} does not match source manifest id {manifest_id}"
+    )]
+    ZoneCatalogSourceManifestMismatch {
+        catalog_source_manifest_id: String,
+        manifest_id: String,
+    },
+    #[error("plan zone {zone_id} is missing from zone catalog {catalog_id}")]
+    PlanZoneMissingFromCatalog { zone_id: String, catalog_id: String },
+    #[error(
+        "plan zone {zone_id} offset {plan_utc_offset_minutes} does not match catalog offset {catalog_utc_offset_minutes}"
+    )]
+    PlanZoneCatalogOffsetMismatch {
+        zone_id: String,
+        plan_utc_offset_minutes: i32,
+        catalog_utc_offset_minutes: i32,
+    },
 }
 
 pub fn evaluate_zone_plan(
@@ -784,6 +803,16 @@ pub fn evaluate_zone_plan_input_with_manifest(
     evaluate_zone_plan_input(input)
 }
 
+pub fn evaluate_zone_plan_input_with_manifest_and_catalog(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+    catalog: &ZoneCatalog,
+) -> Result<ZonePlanReport, ZonePlanError> {
+    validate_input_manifest_pair(input, manifest)?;
+    validate_catalog_against_manifest_and_plan(catalog, manifest, &input.plan)?;
+    evaluate_zone_plan_input(input)
+}
+
 pub fn evaluate_zone_plan_evaluation(
     input: &ZonePlanInput,
     manifest: &SourceManifest,
@@ -813,6 +842,16 @@ pub fn evaluate_zone_plan_evaluation(
         input_caveats: input.caveats.clone(),
         source_caveats,
     })
+}
+
+pub fn evaluate_zone_plan_evaluation_with_catalog(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+    catalog: &ZoneCatalog,
+) -> Result<ZonePlanEvaluation, ZonePlanError> {
+    validate_input_manifest_pair(input, manifest)?;
+    validate_catalog_against_manifest_and_plan(catalog, manifest, &input.plan)?;
+    evaluate_zone_plan_evaluation(input, manifest)
 }
 
 fn summarize_zones(unit_scores: &[ZoneUnitScore]) -> Vec<ZoneSummary> {
@@ -869,6 +908,43 @@ fn validate_input_manifest_pair(
             input_source_manifest_id: input.source_manifest_id.clone(),
             manifest_id: manifest.manifest_id.clone(),
         });
+    }
+    Ok(())
+}
+
+fn validate_catalog_against_manifest_and_plan(
+    catalog: &ZoneCatalog,
+    manifest: &SourceManifest,
+    plan: &ZonePlan,
+) -> Result<(), ZonePlanError> {
+    catalog
+        .validate()
+        .map_err(|err| ZonePlanError::ZoneCatalog(err.to_string()))?;
+    if catalog.source_manifest_id != manifest.manifest_id {
+        return Err(ZonePlanError::ZoneCatalogSourceManifestMismatch {
+            catalog_source_manifest_id: catalog.source_manifest_id.clone(),
+            manifest_id: manifest.manifest_id.clone(),
+        });
+    }
+    let catalog_zones = catalog
+        .zones
+        .iter()
+        .map(|zone| (zone.id.as_str(), zone.utc_offset_minutes))
+        .collect::<BTreeMap<_, _>>();
+    for zone in &plan.zones {
+        let Some(catalog_offset) = catalog_zones.get(zone.id.as_str()) else {
+            return Err(ZonePlanError::PlanZoneMissingFromCatalog {
+                zone_id: zone.id.clone(),
+                catalog_id: catalog.catalog_id.clone(),
+            });
+        };
+        if *catalog_offset != zone.utc_offset_minutes {
+            return Err(ZonePlanError::PlanZoneCatalogOffsetMismatch {
+                zone_id: zone.id.clone(),
+                plan_utc_offset_minutes: zone.utc_offset_minutes,
+                catalog_utc_offset_minutes: *catalog_offset,
+            });
+        }
     }
     Ok(())
 }
@@ -1099,11 +1175,11 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
         name: "seed-two-zone-plan".to_string(),
         zones: vec![
             ZoneSpec {
-                id: "western".to_string(),
+                id: "utc-minus-06-00".to_string(),
                 utc_offset_minutes: -360,
             },
             ZoneSpec {
-                id: "eastern".to_string(),
+                id: "utc-minus-05-00".to_string(),
                 utc_offset_minutes: -300,
             },
         ],
@@ -1290,14 +1366,68 @@ mod tests {
     }
 
     #[test]
+    fn seed_plan_input_scores_with_matching_catalog() {
+        let report = evaluate_zone_plan_input_with_manifest_and_catalog(
+            &seed_plan_input(),
+            &seed_source_manifest(),
+            &seed_zone_catalog(),
+        )
+        .unwrap();
+
+        assert_eq!(report.plan_name, "seed-two-zone-plan");
+        assert_eq!(report.unit_count, 4);
+    }
+
+    #[test]
+    fn plan_input_rejects_missing_catalog_zone() {
+        let mut catalog = seed_zone_catalog();
+        catalog.zones.retain(|zone| zone.id != "utc-minus-06-00");
+
+        assert_eq!(
+            evaluate_zone_plan_input_with_manifest_and_catalog(
+                &seed_plan_input(),
+                &seed_source_manifest(),
+                &catalog,
+            ),
+            Err(ZonePlanError::PlanZoneMissingFromCatalog {
+                zone_id: "utc-minus-06-00".to_string(),
+                catalog_id: "zones-seed-offset-catalog".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn plan_input_rejects_catalog_offset_mismatch() {
+        let mut catalog = seed_zone_catalog();
+        catalog.zones[1].utc_offset_minutes = -300;
+
+        assert_eq!(
+            evaluate_zone_plan_input_with_manifest_and_catalog(
+                &seed_plan_input(),
+                &seed_source_manifest(),
+                &catalog,
+            ),
+            Err(ZonePlanError::PlanZoneCatalogOffsetMismatch {
+                zone_id: "utc-minus-06-00".to_string(),
+                plan_utc_offset_minutes: -360,
+                catalog_utc_offset_minutes: -300,
+            })
+        );
+    }
+
+    #[test]
     fn seed_plan_evaluation_carries_unit_scores_and_caveats() {
-        let evaluation =
-            evaluate_zone_plan_evaluation(&seed_plan_input(), &seed_source_manifest()).unwrap();
+        let evaluation = evaluate_zone_plan_evaluation_with_catalog(
+            &seed_plan_input(),
+            &seed_source_manifest(),
+            &seed_zone_catalog(),
+        )
+        .unwrap();
 
         assert_eq!(evaluation.input_id, "zones-seed-plan-input");
         assert_eq!(evaluation.source_manifest_id, "zones-us-foundation-sources");
         assert_eq!(evaluation.zone_summaries.len(), 2);
-        assert_eq!(evaluation.zone_summaries[0].zone_id, "eastern");
+        assert_eq!(evaluation.zone_summaries[0].zone_id, "utc-minus-05-00");
         assert_eq!(evaluation.zone_summaries[0].population, 160);
         assert_eq!(evaluation.zone_summaries[0].moved_population, 0);
         assert!(
@@ -1310,10 +1440,10 @@ mod tests {
         );
         assert_eq!(evaluation.unit_scores.len(), 4);
         assert_eq!(evaluation.unit_scores[1].unit_id, "west-b");
-        assert_eq!(evaluation.unit_scores[1].zone_id, "western");
+        assert_eq!(evaluation.unit_scores[1].zone_id, "utc-minus-06-00");
         assert_eq!(
             evaluation.unit_scores[1].reference_zone_id,
-            Some("western".to_string())
+            Some("utc-minus-06-00".to_string())
         );
         assert_eq!(evaluation.unit_scores[1].moved_from_reference, Some(false));
         assert_eq!(evaluation.unit_scores[1].absolute_error_minutes, 15.0);
@@ -1424,7 +1554,7 @@ mod tests {
         assert_eq!(
             evaluate_zone_plan(&units, &adjacency, &plan),
             Err(ZonePlanError::InvalidZoneUtcOffset {
-                zone_id: "western".to_string(),
+                zone_id: "utc-minus-06-00".to_string(),
                 utc_offset_minutes: 900,
             })
         );
@@ -1452,11 +1582,11 @@ mod tests {
             name: "rplan-county-zone-plan".to_string(),
             zones: vec![
                 ZoneSpec {
-                    id: "western".to_string(),
+                    id: "utc-minus-06-00".to_string(),
                     utc_offset_minutes: -360,
                 },
                 ZoneSpec {
-                    id: "eastern".to_string(),
+                    id: "utc-minus-05-00".to_string(),
                     utc_offset_minutes: -300,
                 },
             ],

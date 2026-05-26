@@ -52,14 +52,15 @@ cargo run -p zones-cli -- zone-catalog-report
 The seed report runs a tiny four-county fixture through the first plan evaluator.
 It is not a real proposal; it proves the scoring contract and RLINE dependency
 shape. The evaluate-plan command runs the same contract from a JSON input file,
-checks that the named source manifest matches, and then scores the plan. The
-detail variant also emits per-unit error rows and propagated caveats. The source
-report validates the first committed source manifest and summarizes which source
-categories are currently covered. Generated evaluation artifacts are written
-under `target/` by default and are intentionally not committed. `write-evaluation`
-writes a full JSON packet, a per-unit CSV score table, and a per-zone summary
-CSV. When a plan input includes `reference_assignment`, reports include moved
-unit and moved population counts against that reference.
+checks that the named source manifest and zone catalog match, and then scores
+the plan. The detail variant also emits per-unit error rows and propagated
+caveats. The source report validates the first committed source manifest and
+summarizes which source categories are currently covered. Generated evaluation
+artifacts are written under `target/` by default and are intentionally not
+committed. `write-evaluation` writes a full JSON packet, a per-unit CSV score
+table, and a per-zone summary CSV. When a plan input includes
+`reference_assignment`, reports include moved unit and moved population counts
+against that reference.
 
 The seed zone catalog proves ZONES can represent whole-hour, half-hour, and
 45-minute offsets. It is not a complete list of legal time zones.

@@ -2,9 +2,9 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::{fs, path::PathBuf};
 use zones_core::{
-    evaluate_zone_plan, evaluate_zone_plan_evaluation, evaluate_zone_plan_input_with_manifest,
-    seed_fixture, seed_plan_input, seed_source_manifest, seed_zone_catalog, SourceManifest,
-    ZoneCatalog, ZonePlanInput,
+    evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
+    evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture, seed_plan_input,
+    seed_source_manifest, seed_zone_catalog, SourceManifest, ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -25,18 +25,24 @@ enum Command {
         path: PathBuf,
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
+        #[arg(long, default_value = "data/zone-catalogs/seed-offsets.json")]
+        zone_catalog: PathBuf,
     },
     EvaluatePlanDetail {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
+        #[arg(long, default_value = "data/zone-catalogs/seed-offsets.json")]
+        zone_catalog: PathBuf,
     },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
+        #[arg(long, default_value = "data/zone-catalogs/seed-offsets.json")]
+        zone_catalog: PathBuf,
         #[arg(long, default_value = "target/zones/seed-evaluation.json")]
         output: PathBuf,
         #[arg(long, default_value = "target/zones/seed-unit-scores.csv")]
@@ -74,28 +80,37 @@ fn main() -> Result<()> {
         Command::EvaluatePlan {
             path,
             source_manifest,
+            zone_catalog,
         } => {
-            let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
-            let report = evaluate_zone_plan_input_with_manifest(&input, &manifest)?;
+            let (input, manifest, catalog) =
+                read_plan_manifest_and_catalog(&path, &source_manifest, &zone_catalog)?;
+            let report =
+                evaluate_zone_plan_input_with_manifest_and_catalog(&input, &manifest, &catalog)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::EvaluatePlanDetail {
             path,
             source_manifest,
+            zone_catalog,
         } => {
-            let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
-            let evaluation = evaluate_zone_plan_evaluation(&input, &manifest)?;
+            let (input, manifest, catalog) =
+                read_plan_manifest_and_catalog(&path, &source_manifest, &zone_catalog)?;
+            let evaluation =
+                evaluate_zone_plan_evaluation_with_catalog(&input, &manifest, &catalog)?;
             println!("{}", serde_json::to_string_pretty(&evaluation)?);
         }
         Command::WriteEvaluation {
             path,
             source_manifest,
+            zone_catalog,
             output,
             unit_scores_csv,
             zone_summaries_csv,
         } => {
-            let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
-            let evaluation = evaluate_zone_plan_evaluation(&input, &manifest)?;
+            let (input, manifest, catalog) =
+                read_plan_manifest_and_catalog(&path, &source_manifest, &zone_catalog)?;
+            let evaluation =
+                evaluate_zone_plan_evaluation_with_catalog(&input, &manifest, &catalog)?;
             write_json(&output, &evaluation)?;
             write_unit_scores_csv(&unit_scores_csv, &evaluation.unit_scores)?;
             write_zone_summaries_csv(&zone_summaries_csv, &evaluation.zone_summaries)?;
@@ -131,10 +146,11 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn read_plan_and_manifest(
+fn read_plan_manifest_and_catalog(
     path: &PathBuf,
     source_manifest: &PathBuf,
-) -> Result<(ZonePlanInput, SourceManifest)> {
+    zone_catalog: &PathBuf,
+) -> Result<(ZonePlanInput, SourceManifest, ZoneCatalog)> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     let input: ZonePlanInput = serde_json::from_slice(&bytes)
         .with_context(|| format!("failed to parse {}", path.display()))?;
@@ -150,7 +166,11 @@ fn read_plan_and_manifest(
             source_manifest.display()
         )
     })?;
-    Ok((input, manifest))
+    let catalog_bytes = fs::read(zone_catalog)
+        .with_context(|| format!("failed to read zone catalog {}", zone_catalog.display()))?;
+    let catalog: ZoneCatalog = serde_json::from_slice(&catalog_bytes)
+        .with_context(|| format!("failed to parse zone catalog {}", zone_catalog.display()))?;
+    Ok((input, manifest, catalog))
 }
 
 fn write_json<T: serde::Serialize>(path: &PathBuf, value: &T) -> Result<()> {

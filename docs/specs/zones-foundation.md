@@ -134,7 +134,8 @@ exposure metrics, but those must be named separately from standard solar error.
 Zone catalogs are analysis inputs, not universal legal truth. A catalog should
 name its source manifest, generation date, offsets in minutes, and caveats. The
 seed catalog exists only to prove the representation of whole-hour, half-hour,
-and 45-minute offsets.
+and 45-minute offsets. Plan evaluation must reject plan zones that are missing
+from the supplied catalog or whose offsets disagree with the catalog.
 
 Later reports may add:
 

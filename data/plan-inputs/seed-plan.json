@@ -49,11 +49,11 @@
     "name": "seed-two-zone-plan",
     "zones": [
       {
-        "id": "western",
+        "id": "utc-minus-06-00",
         "utc_offset_minutes": -360
       },
       {
-        "id": "eastern",
+        "id": "utc-minus-05-00",
         "utc_offset_minutes": -300
       }
     ],
