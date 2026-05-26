@@ -55,7 +55,8 @@ checks that the named source manifest matches, and then scores the plan. The
 detail variant also emits per-unit error rows and propagated caveats. The source
 report validates the first committed source manifest and summarizes which source
 categories are currently covered. Generated evaluation artifacts are written
-under `target/` by default and are intentionally not committed.
+under `target/` by default and are intentionally not committed. `write-evaluation`
+writes both a full JSON packet and a per-unit CSV score table.
 
 ## Non-goals
 

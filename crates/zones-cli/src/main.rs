@@ -38,6 +38,8 @@ enum Command {
         source_manifest: PathBuf,
         #[arg(long, default_value = "target/zones/seed-evaluation.json")]
         output: PathBuf,
+        #[arg(long, default_value = "target/zones/seed-unit-scores.csv")]
+        unit_scores_csv: PathBuf,
     },
     SeedSources,
     SourceReport {
@@ -81,11 +83,14 @@ fn main() -> Result<()> {
             path,
             source_manifest,
             output,
+            unit_scores_csv,
         } => {
             let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
             let evaluation = evaluate_zone_plan_evaluation(&input, &manifest)?;
             write_json(&output, &evaluation)?;
+            write_unit_scores_csv(&unit_scores_csv, &evaluation.unit_scores)?;
             println!("{}", output.display());
+            println!("{}", unit_scores_csv.display());
         }
         Command::SeedSources => {
             let manifest = seed_source_manifest();
@@ -134,4 +139,36 @@ fn write_json<T: serde::Serialize>(path: &PathBuf, value: &T) -> Result<()> {
     fs::write(path, format!("{json}\n"))
         .with_context(|| format!("failed to write {}", path.display()))?;
     Ok(())
+}
+
+fn write_unit_scores_csv(path: &PathBuf, scores: &[zones_core::ZoneUnitScore]) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create output directory {}", parent.display()))?;
+    }
+    let mut csv = String::from(
+        "unit_id,unit_name,zone_id,population,solar_offset_minutes,zone_utc_offset_minutes,absolute_error_minutes\n",
+    );
+    for score in scores {
+        csv.push_str(&format!(
+            "{},{},{},{},{},{},{}\n",
+            csv_cell(&score.unit_id),
+            csv_cell(&score.unit_name),
+            csv_cell(&score.zone_id),
+            score.population,
+            score.solar_offset_minutes,
+            score.zone_utc_offset_minutes,
+            score.absolute_error_minutes
+        ));
+    }
+    fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(())
+}
+
+fn csv_cell(value: &str) -> String {
+    if value.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_string()
+    }
 }

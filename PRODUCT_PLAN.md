@@ -17,7 +17,8 @@ time-zone plan against one or more candidate plans and emits:
 - boundary-cut counts,
 - units moved across current legal zones,
 - state/county boundary respect,
-- source and assumption notes.
+- source and assumption notes,
+- JSON and CSV evaluation artifacts under ignored output paths.
 
 ## Waves
 
