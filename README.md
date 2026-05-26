@@ -62,6 +62,11 @@ table, and a per-zone summary CSV. When a plan input includes
 `reference_assignment`, reports include moved unit and moved population counts
 against that reference.
 
+Plan inputs carry an explicit scenario label and kind, such as `current-law`,
+`historical-law`, `proposed-scenario`, or `analytic-counterfactual`.
+Current-law and historical-law scenarios must cite an authority source from the
+source manifest.
+
 The seed zone catalog proves ZONES can represent whole-hour, half-hour, and
 45-minute offsets. It is not a complete list of legal time zones.
 

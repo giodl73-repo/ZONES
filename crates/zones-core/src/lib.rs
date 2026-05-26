@@ -574,10 +574,29 @@ pub struct ZonePlan {
     pub assignment: Vec<usize>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ZoneScenarioKind {
+    CurrentLaw,
+    HistoricalLaw,
+    ProposedScenario,
+    AnalyticCounterfactual,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ZoneScenario {
+    pub scenario_id: String,
+    pub kind: ZoneScenarioKind,
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority_source_id: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZonePlanInput {
     pub input_id: String,
     pub source_manifest_id: String,
+    pub scenario: ZoneScenario,
     pub units: Vec<BoundaryUnit>,
     pub adjacency: Vec<Vec<usize>>,
     pub plan: ZonePlan,
@@ -631,6 +650,7 @@ pub struct ZoneSummary {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZonePlanEvaluation {
     pub input_id: String,
+    pub scenario: ZoneScenario,
     pub source_manifest_id: String,
     pub source_manifest_generated_on: String,
     pub plan_report: ZonePlanReport,
@@ -714,6 +734,13 @@ pub enum ZonePlanError {
         input_source_manifest_id: String,
         manifest_id: String,
     },
+    #[error("scenario {scenario_id} is missing authority_source_id for current-law or historical-law evaluation")]
+    ScenarioAuthorityRequired { scenario_id: String },
+    #[error("scenario {scenario_id} references unknown authority source {source_id}")]
+    UnknownScenarioAuthoritySource {
+        scenario_id: String,
+        source_id: String,
+    },
     #[error("zone catalog validation failed: {0}")]
     ZoneCatalog(String),
     #[error(
@@ -787,6 +814,7 @@ pub fn evaluate_zone_plan_input(input: &ZonePlanInput) -> Result<ZonePlanReport,
         "zone_plan_input.source_manifest_id",
         &input.source_manifest_id,
     )?;
+    validate_scenario_shape(&input.scenario)?;
     evaluate_zone_plan_with_reference(
         &input.units,
         &input.adjacency,
@@ -834,6 +862,7 @@ pub fn evaluate_zone_plan_evaluation(
 
     Ok(ZonePlanEvaluation {
         input_id: input.input_id.clone(),
+        scenario: input.scenario.clone(),
         source_manifest_id: input.source_manifest_id.clone(),
         source_manifest_generated_on: manifest.generated_on.clone(),
         plan_report,
@@ -908,6 +937,38 @@ fn validate_input_manifest_pair(
             input_source_manifest_id: input.source_manifest_id.clone(),
             manifest_id: manifest.manifest_id.clone(),
         });
+    }
+    validate_scenario_against_manifest(&input.scenario, manifest)?;
+    Ok(())
+}
+
+fn validate_scenario_shape(scenario: &ZoneScenario) -> Result<(), ZonePlanError> {
+    validate_non_empty_plan("zone_scenario.scenario_id", &scenario.scenario_id)?;
+    validate_non_empty_plan("zone_scenario.label", &scenario.label)?;
+    if matches!(
+        scenario.kind,
+        ZoneScenarioKind::CurrentLaw | ZoneScenarioKind::HistoricalLaw
+    ) && scenario.authority_source_id.is_none()
+    {
+        return Err(ZonePlanError::ScenarioAuthorityRequired {
+            scenario_id: scenario.scenario_id.clone(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_scenario_against_manifest(
+    scenario: &ZoneScenario,
+    manifest: &SourceManifest,
+) -> Result<(), ZonePlanError> {
+    validate_scenario_shape(scenario)?;
+    if let Some(source_id) = &scenario.authority_source_id {
+        if !manifest.source_ids().contains(source_id.as_str()) {
+            return Err(ZonePlanError::UnknownScenarioAuthoritySource {
+                scenario_id: scenario.scenario_id.clone(),
+                source_id: source_id.clone(),
+            });
+        }
     }
     Ok(())
 }
@@ -1193,6 +1254,12 @@ pub fn seed_plan_input() -> ZonePlanInput {
     ZonePlanInput {
         input_id: "zones-seed-plan-input".to_string(),
         source_manifest_id: "zones-us-foundation-sources".to_string(),
+        scenario: ZoneScenario {
+            scenario_id: "seed-current-law-baseline".to_string(),
+            kind: ZoneScenarioKind::CurrentLaw,
+            label: "Seed current-law baseline".to_string(),
+            authority_source_id: Some("dot-49-cfr-71".to_string()),
+        },
         units,
         adjacency,
         plan,
@@ -1425,6 +1492,8 @@ mod tests {
         .unwrap();
 
         assert_eq!(evaluation.input_id, "zones-seed-plan-input");
+        assert_eq!(evaluation.scenario.scenario_id, "seed-current-law-baseline");
+        assert_eq!(evaluation.scenario.kind, ZoneScenarioKind::CurrentLaw);
         assert_eq!(evaluation.source_manifest_id, "zones-us-foundation-sources");
         assert_eq!(evaluation.zone_summaries.len(), 2);
         assert_eq!(evaluation.zone_summaries[0].zone_id, "utc-minus-05-00");
@@ -1463,6 +1532,45 @@ mod tests {
                 manifest_id: "different-manifest".to_string(),
             })
         );
+    }
+
+    #[test]
+    fn current_law_scenario_requires_authority_source() {
+        let mut input = seed_plan_input();
+        input.scenario.authority_source_id = None;
+
+        assert_eq!(
+            evaluate_zone_plan_input(&input),
+            Err(ZonePlanError::ScenarioAuthorityRequired {
+                scenario_id: "seed-current-law-baseline".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn scenario_authority_source_must_exist_in_manifest() {
+        let mut input = seed_plan_input();
+        input.scenario.authority_source_id = Some("missing-source".to_string());
+
+        assert_eq!(
+            evaluate_zone_plan_input_with_manifest(&input, &seed_source_manifest()),
+            Err(ZonePlanError::UnknownScenarioAuthoritySource {
+                scenario_id: "seed-current-law-baseline".to_string(),
+                source_id: "missing-source".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn counterfactual_scenario_does_not_require_authority_source() {
+        let mut input = seed_plan_input();
+        input.scenario.kind = ZoneScenarioKind::AnalyticCounterfactual;
+        input.scenario.scenario_id = "seed-counterfactual".to_string();
+        input.scenario.authority_source_id = None;
+
+        let report = evaluate_zone_plan_input(&input).unwrap();
+
+        assert_eq!(report.unit_count, 4);
     }
 
     #[test]

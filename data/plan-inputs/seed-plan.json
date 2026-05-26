@@ -1,6 +1,12 @@
 {
   "input_id": "zones-seed-plan-input",
   "source_manifest_id": "zones-us-foundation-sources",
+  "scenario": {
+    "scenario_id": "seed-current-law-baseline",
+    "kind": "current-law",
+    "label": "Seed current-law baseline",
+    "authority_source_id": "dot-49-cfr-71"
+  },
   "units": [
     {
       "id": "west-a",

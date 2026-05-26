@@ -96,6 +96,7 @@ The portable JSON plan-input contract contains:
 
 - `input_id`;
 - `source_manifest_id`;
+- `scenario`, including id, kind, label, and optional authority source id;
 - `units`, each with id, name, solar offset, and population;
 - `adjacency`, as zero-based unit-index neighbors;
 - `plan`, with zone specs and one assignment index per unit;
@@ -107,6 +108,9 @@ The portable JSON plan-input contract contains:
 This is intentionally shallow at the foundation layer: later county baselines
 must add per-field source references, but even the seed path should reject a
 plan file whose manifest identity does not match the supplied manifest.
+Current-law and historical-law scenarios must reference an authority source in
+the supplied source manifest; proposed and counterfactual scenarios may omit it
+when clearly labeled.
 `evaluate-plan-detail` emits the same aggregate report plus per-unit error rows,
 input caveats, and source caveats so county baselines can publish both summary
 and inspection artifacts from the same input.
