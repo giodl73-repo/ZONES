@@ -67,15 +67,15 @@ Falsifiers:
 
 ## Experiments
 
-- [ ] Serialize/deserialize temporal model fixtures.
+- [x] Serialize/deserialize temporal model fixtures.
 - [ ] Validate US county baseline context.
-- [ ] Validate one non-US pilot.
+- [x] Validate one non-US pilot.
 - [ ] Compare IANA lookup to selected legal-boundary source.
 - [ ] Produce source limitation matrix.
 
 ## Quality Checkpoints
 
-- [ ] Model separates current law, historical law, proposed scenarios, and
+- [x] Model separates current law, historical law, proposed scenarios, and
   analytic counterfactuals.
 - [ ] RPLAN/RLINE/ZONES boundaries are explicit.
 - [ ] IANA is not described as complete legal-boundary evidence.

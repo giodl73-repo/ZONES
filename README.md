@@ -70,6 +70,11 @@ source manifest.
 The seed zone catalog proves ZONES can represent whole-hour, half-hour, and
 45-minute offsets. It is not a complete list of legal time zones.
 
+`data/temporal-fixtures/non-us-pilot.json` is a synthetic global/temporal model
+fixture. It validates the serializable contract for jurisdictions, boundary
+units, graph versions, time-zone regimes, offset rules, DST deltas, and
+evaluation contexts without claiming to be a legal dataset.
+
 ## Non-goals
 
 - ZONES is not a legal time-zone authority.

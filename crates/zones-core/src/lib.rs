@@ -236,6 +236,38 @@ pub struct EvaluationContext {
     pub source_vintage: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TemporalDataset {
+    pub dataset_id: String,
+    pub source_manifest: SourceManifest,
+    pub jurisdictions: Vec<Jurisdiction>,
+    pub units: Vec<TemporalBoundaryUnit>,
+    pub boundary_graphs: Vec<BoundaryGraphVersion>,
+    pub regimes: Vec<TimeZoneRegime>,
+    pub evaluation_contexts: Vec<EvaluationContext>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TemporalDatasetReport {
+    pub dataset_id: String,
+    pub source_manifest_id: String,
+    pub jurisdiction_count: usize,
+    pub unit_count: usize,
+    pub boundary_graph_count: usize,
+    pub regime_count: usize,
+    pub evaluation_context_count: usize,
+    pub current_law_regime_count: usize,
+    pub historical_law_regime_count: usize,
+    pub proposed_scenario_regime_count: usize,
+    pub analytic_counterfactual_regime_count: usize,
+    pub offset_rule_count: usize,
+    pub dst_rule_count: usize,
+    pub non_whole_hour_rule_count: usize,
+    pub caveat_count: usize,
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum TemporalModelError {
     #[error("temporal extent valid_from {valid_from} must be earlier than valid_to {valid_to}")]
@@ -285,6 +317,17 @@ pub enum TemporalModelError {
     UnknownSourceReference {
         owner_kind: &'static str,
         source_id: String,
+    },
+    #[error("dataset contains duplicate {kind} id {id}")]
+    DuplicateDatasetId { kind: &'static str, id: String },
+    #[error("evaluation context references unknown boundary graph {boundary_graph_id}")]
+    UnknownEvaluationBoundaryGraph { boundary_graph_id: String },
+    #[error("evaluation context references unknown regime {regime_id}")]
+    UnknownEvaluationRegime { regime_id: String },
+    #[error("{owner_kind} references unknown jurisdiction {jurisdiction_id}")]
+    UnknownJurisdiction {
+        owner_kind: &'static str,
+        jurisdiction_id: String,
     },
 }
 
@@ -452,6 +495,15 @@ impl TemporalBoundaryUnit {
     }
 }
 
+impl Jurisdiction {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("jurisdiction.jurisdiction_id", &self.jurisdiction_id)?;
+        validate_non_empty("jurisdiction.name", &self.name)?;
+        validate_non_empty("jurisdiction.source_id", &self.source_id)?;
+        self.temporal_extent.validate()
+    }
+}
+
 impl BoundaryGraphVersion {
     pub fn validate(&self, unit_count: usize) -> Result<(), TemporalModelError> {
         validate_non_empty("boundary_graph.graph_id", &self.graph_id)?;
@@ -543,6 +595,176 @@ impl TimeZoneRegime {
         }
         Ok(())
     }
+}
+
+impl EvaluationContext {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        self.evaluation_period.validate()?;
+        validate_non_empty(
+            "evaluation_context.boundary_graph_id",
+            &self.boundary_graph_id,
+        )?;
+        validate_non_empty("evaluation_context.regime_id", &self.regime_id)?;
+        validate_non_empty(
+            "evaluation_context.weighting_source_id",
+            &self.weighting_source_id,
+        )?;
+        validate_non_empty("evaluation_context.source_vintage", &self.source_vintage)
+    }
+}
+
+impl TemporalDataset {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("temporal_dataset.dataset_id", &self.dataset_id)?;
+        self.source_manifest.validate()?;
+
+        validate_unique_ids(
+            "jurisdiction",
+            self.jurisdictions
+                .iter()
+                .map(|jurisdiction| jurisdiction.jurisdiction_id.as_str()),
+        )?;
+        validate_unique_ids("unit", self.units.iter().map(|unit| unit.unit_id.as_str()))?;
+        validate_unique_ids(
+            "boundary_graph",
+            self.boundary_graphs
+                .iter()
+                .map(|graph| graph.graph_id.as_str()),
+        )?;
+        validate_unique_ids(
+            "regime",
+            self.regimes.iter().map(|regime| regime.regime_id.as_str()),
+        )?;
+        let jurisdiction_ids = self
+            .jurisdictions
+            .iter()
+            .map(|jurisdiction| jurisdiction.jurisdiction_id.as_str())
+            .collect::<BTreeSet<_>>();
+
+        let mut source_refs = Vec::new();
+        for jurisdiction in &self.jurisdictions {
+            jurisdiction.validate()?;
+            if let Some(parent_id) = &jurisdiction.parent_jurisdiction_id {
+                if !jurisdiction_ids.contains(parent_id.as_str()) {
+                    return Err(TemporalModelError::UnknownJurisdiction {
+                        owner_kind: "jurisdiction.parent_jurisdiction_id",
+                        jurisdiction_id: parent_id.clone(),
+                    });
+                }
+            }
+            source_refs.push(("jurisdiction", jurisdiction.source_id.as_str()));
+        }
+        for unit in &self.units {
+            unit.validate()?;
+            if !jurisdiction_ids.contains(unit.jurisdiction_id.as_str()) {
+                return Err(TemporalModelError::UnknownJurisdiction {
+                    owner_kind: "boundary_unit.jurisdiction_id",
+                    jurisdiction_id: unit.jurisdiction_id.clone(),
+                });
+            }
+            source_refs.push((
+                "representative_point",
+                unit.representative_point.source_id.as_str(),
+            ));
+        }
+        for graph in &self.boundary_graphs {
+            graph.validate(self.units.len())?;
+            source_refs.push(("boundary_graph", graph.source_id.as_str()));
+        }
+        for regime in &self.regimes {
+            regime.validate(&self.units)?;
+            source_refs.push(("regime", regime.source_id.as_str()));
+        }
+        for context in &self.evaluation_contexts {
+            context.validate()?;
+            source_refs.push(("evaluation_context", context.weighting_source_id.as_str()));
+        }
+        validate_source_references(&self.source_manifest, &source_refs)?;
+
+        let graph_ids = self
+            .boundary_graphs
+            .iter()
+            .map(|graph| graph.graph_id.as_str())
+            .collect::<BTreeSet<_>>();
+        let regime_ids = self
+            .regimes
+            .iter()
+            .map(|regime| regime.regime_id.as_str())
+            .collect::<BTreeSet<_>>();
+        for context in &self.evaluation_contexts {
+            if !graph_ids.contains(context.boundary_graph_id.as_str()) {
+                return Err(TemporalModelError::UnknownEvaluationBoundaryGraph {
+                    boundary_graph_id: context.boundary_graph_id.clone(),
+                });
+            }
+            if !regime_ids.contains(context.regime_id.as_str()) {
+                return Err(TemporalModelError::UnknownEvaluationRegime {
+                    regime_id: context.regime_id.clone(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn report(&self) -> Result<TemporalDatasetReport, TemporalModelError> {
+        self.validate()?;
+        let mut report = TemporalDatasetReport {
+            dataset_id: self.dataset_id.clone(),
+            source_manifest_id: self.source_manifest.manifest_id.clone(),
+            jurisdiction_count: self.jurisdictions.len(),
+            unit_count: self.units.len(),
+            boundary_graph_count: self.boundary_graphs.len(),
+            regime_count: self.regimes.len(),
+            evaluation_context_count: self.evaluation_contexts.len(),
+            current_law_regime_count: 0,
+            historical_law_regime_count: 0,
+            proposed_scenario_regime_count: 0,
+            analytic_counterfactual_regime_count: 0,
+            offset_rule_count: 0,
+            dst_rule_count: 0,
+            non_whole_hour_rule_count: 0,
+            caveat_count: self.caveats.len(),
+        };
+        for regime in &self.regimes {
+            match regime.authority {
+                RegimeAuthority::CurrentLaw => report.current_law_regime_count += 1,
+                RegimeAuthority::HistoricalLaw => report.historical_law_regime_count += 1,
+                RegimeAuthority::ProposedScenario => report.proposed_scenario_regime_count += 1,
+                RegimeAuthority::AnalyticCounterfactual => {
+                    report.analytic_counterfactual_regime_count += 1
+                }
+            }
+            report.offset_rule_count += regime.offset_rules.len();
+            report.dst_rule_count += regime
+                .offset_rules
+                .iter()
+                .filter(|rule| rule.dst_delta_minutes.unwrap_or(0) != 0)
+                .count();
+            report.non_whole_hour_rule_count += regime
+                .offset_rules
+                .iter()
+                .filter(|rule| rule.standard_offset_minutes % 60 != 0)
+                .count();
+        }
+        Ok(report)
+    }
+}
+
+fn validate_unique_ids<'a>(
+    kind: &'static str,
+    ids: impl IntoIterator<Item = &'a str>,
+) -> Result<(), TemporalModelError> {
+    let mut seen = BTreeSet::new();
+    for id in ids {
+        validate_non_empty(kind, id)?;
+        if !seen.insert(id) {
+            return Err(TemporalModelError::DuplicateDatasetId {
+                kind,
+                id: id.to_string(),
+            });
+        }
+    }
+    Ok(())
 }
 
 fn validate_non_empty(kind: &'static str, value: &str) -> Result<(), TemporalModelError> {
@@ -1361,6 +1583,176 @@ pub fn seed_zone_catalog() -> ZoneCatalog {
     }
 }
 
+pub fn seed_temporal_dataset() -> TemporalDataset {
+    TemporalDataset {
+        dataset_id: "zones-temporal-non-us-pilot".to_string(),
+        source_manifest: SourceManifest {
+            manifest_id: "zones-temporal-pilot-sources".to_string(),
+            generated_on: "2026-05-26".to_string(),
+            sources: vec![
+                SourceCitation {
+                    source_id: "pilot-boundaries".to_string(),
+                    title: "Synthetic civic boundary pilot".to_string(),
+                    kind: SourceKind::GeospatialBoundary,
+                    url: "https://github.com/giodl73-repo/ZONES".to_string(),
+                    retrieved_on: "2026-05-26".to_string(),
+                    vintage: Some("fixture".to_string()),
+                    content_hash: None,
+                    caveats: vec![
+                        "Synthetic boundary graph used only to validate the temporal model contract."
+                            .to_string(),
+                    ],
+                },
+                SourceCitation {
+                    source_id: "pilot-time-law".to_string(),
+                    title: "Synthetic non-US time-law pilot".to_string(),
+                    kind: SourceKind::LegalText,
+                    url: "https://github.com/giodl73-repo/ZONES".to_string(),
+                    retrieved_on: "2026-05-26".to_string(),
+                    vintage: Some("fixture".to_string()),
+                    content_hash: None,
+                    caveats: vec![
+                        "Synthetic authority source; proves shape, not legal truth.".to_string(),
+                    ],
+                },
+                SourceCitation {
+                    source_id: "pilot-population".to_string(),
+                    title: "Synthetic population weights".to_string(),
+                    kind: SourceKind::Population,
+                    url: "https://github.com/giodl73-repo/ZONES".to_string(),
+                    retrieved_on: "2026-05-26".to_string(),
+                    vintage: Some("fixture".to_string()),
+                    content_hash: None,
+                    caveats: vec![
+                        "Synthetic weights for evaluation-context validation only.".to_string(),
+                    ],
+                },
+            ],
+        },
+        jurisdictions: vec![
+            Jurisdiction {
+                jurisdiction_id: "NP".to_string(),
+                name: "Nepal".to_string(),
+                parent_jurisdiction_id: None,
+                source_id: "pilot-boundaries".to_string(),
+                temporal_extent: TemporalExtent::current(),
+            },
+            Jurisdiction {
+                jurisdiction_id: "AU".to_string(),
+                name: "Australia".to_string(),
+                parent_jurisdiction_id: None,
+                source_id: "pilot-boundaries".to_string(),
+                temporal_extent: TemporalExtent::current(),
+            },
+        ],
+        units: vec![
+            TemporalBoundaryUnit {
+                unit_id: "NP-KTM".to_string(),
+                jurisdiction_id: "NP".to_string(),
+                unit_level: UnitLevel::District,
+                name: "Kathmandu pilot district".to_string(),
+                geometry_ref: Some("pilot-boundaries#NP-KTM".to_string()),
+                representative_point: RepresentativePoint {
+                    latitude: 27.7172,
+                    longitude: 85.3240,
+                    method: RepresentativePointMethod::SourceProvided,
+                    source_id: "pilot-boundaries".to_string(),
+                },
+                temporal_extent: TemporalExtent::current(),
+            },
+            TemporalBoundaryUnit {
+                unit_id: "AU-ADL".to_string(),
+                jurisdiction_id: "AU".to_string(),
+                unit_level: UnitLevel::Municipality,
+                name: "Adelaide pilot municipality".to_string(),
+                geometry_ref: Some("pilot-boundaries#AU-ADL".to_string()),
+                representative_point: RepresentativePoint {
+                    latitude: -34.9285,
+                    longitude: 138.6007,
+                    method: RepresentativePointMethod::SourceProvided,
+                    source_id: "pilot-boundaries".to_string(),
+                },
+                temporal_extent: TemporalExtent::current(),
+            },
+        ],
+        boundary_graphs: vec![BoundaryGraphVersion {
+            graph_id: "pilot-global-temporal-graph".to_string(),
+            unit_universe_id: "pilot-global-temporal-units".to_string(),
+            source_id: "pilot-boundaries".to_string(),
+            temporal_extent: TemporalExtent::current(),
+            adjacency: vec![vec![], vec![]],
+        }],
+        regimes: vec![
+            TimeZoneRegime {
+                regime_id: "nepal-current-law".to_string(),
+                authority: RegimeAuthority::CurrentLaw,
+                jurisdiction_scope: "NP".to_string(),
+                source_id: "pilot-time-law".to_string(),
+                temporal_extent: TemporalExtent::current(),
+                assignments: vec![TimeZoneAssignment {
+                    unit_id: "NP-KTM".to_string(),
+                    zone_id: "NPT".to_string(),
+                    temporal_extent: TemporalExtent::current(),
+                }],
+                offset_rules: vec![OffsetRule {
+                    rule_id: "npt-current".to_string(),
+                    zone_id: "NPT".to_string(),
+                    standard_offset_minutes: 345,
+                    temporal_extent: TemporalExtent::current(),
+                    dst_delta_minutes: None,
+                    transition_rule_ref: None,
+                    observance_notes: vec!["Quarter-hour offset pilot.".to_string()],
+                }],
+            },
+            TimeZoneRegime {
+                regime_id: "south-australia-current-law".to_string(),
+                authority: RegimeAuthority::CurrentLaw,
+                jurisdiction_scope: "AU-SA".to_string(),
+                source_id: "pilot-time-law".to_string(),
+                temporal_extent: TemporalExtent::current(),
+                assignments: vec![TimeZoneAssignment {
+                    unit_id: "AU-ADL".to_string(),
+                    zone_id: "ACST".to_string(),
+                    temporal_extent: TemporalExtent::current(),
+                }],
+                offset_rules: vec![OffsetRule {
+                    rule_id: "acst-current".to_string(),
+                    zone_id: "ACST".to_string(),
+                    standard_offset_minutes: 570,
+                    temporal_extent: TemporalExtent::current(),
+                    dst_delta_minutes: Some(60),
+                    transition_rule_ref: Some("southern-hemisphere-seasonal-dst".to_string()),
+                    observance_notes: vec![
+                        "Half-hour standard offset with a DST delta pilot.".to_string(),
+                    ],
+                }],
+            },
+        ],
+        evaluation_contexts: vec![
+            EvaluationContext {
+                evaluation_period: TemporalExtent::current(),
+                boundary_graph_id: "pilot-global-temporal-graph".to_string(),
+                regime_id: "nepal-current-law".to_string(),
+                representative_point_method: RepresentativePointMethod::SourceProvided,
+                weighting_source_id: "pilot-population".to_string(),
+                source_vintage: "fixture".to_string(),
+            },
+            EvaluationContext {
+                evaluation_period: TemporalExtent::current(),
+                boundary_graph_id: "pilot-global-temporal-graph".to_string(),
+                regime_id: "south-australia-current-law".to_string(),
+                representative_point_method: RepresentativePointMethod::SourceProvided,
+                weighting_source_id: "pilot-population".to_string(),
+                source_vintage: "fixture".to_string(),
+            },
+        ],
+        caveats: vec![
+            "Synthetic non-US fixture validates the data contract only; it is not a legal dataset."
+                .to_string(),
+        ],
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1820,6 +2212,42 @@ mod tests {
             regime.validate(&[unit]),
             Err(TemporalModelError::UnknownAssignmentZone {
                 zone_id: "missing-zone".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn seed_temporal_dataset_reports_non_us_offsets_and_dst() {
+        let report = seed_temporal_dataset().report().unwrap();
+
+        assert_eq!(report.dataset_id, "zones-temporal-non-us-pilot");
+        assert_eq!(report.unit_count, 2);
+        assert_eq!(report.current_law_regime_count, 2);
+        assert_eq!(report.offset_rule_count, 2);
+        assert_eq!(report.dst_rule_count, 1);
+        assert_eq!(report.non_whole_hour_rule_count, 2);
+    }
+
+    #[test]
+    fn committed_temporal_dataset_matches_seed_dataset() {
+        let dataset: TemporalDataset = serde_json::from_str(include_str!(
+            "../../../data/temporal-fixtures/non-us-pilot.json"
+        ))
+        .unwrap();
+
+        assert_eq!(dataset, seed_temporal_dataset());
+        assert!(dataset.report().is_ok());
+    }
+
+    #[test]
+    fn temporal_dataset_rejects_unknown_evaluation_regime() {
+        let mut dataset = seed_temporal_dataset();
+        dataset.evaluation_contexts[0].regime_id = "missing-regime".to_string();
+
+        assert_eq!(
+            dataset.validate(),
+            Err(TemporalModelError::UnknownEvaluationRegime {
+                regime_id: "missing-regime".to_string(),
             })
         );
     }

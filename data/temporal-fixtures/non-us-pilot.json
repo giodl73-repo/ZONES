@@ -1,0 +1,173 @@
+{
+  "dataset_id": "zones-temporal-non-us-pilot",
+  "source_manifest": {
+    "manifest_id": "zones-temporal-pilot-sources",
+    "generated_on": "2026-05-26",
+    "sources": [
+      {
+        "source_id": "pilot-boundaries",
+        "title": "Synthetic civic boundary pilot",
+        "kind": "geospatial-boundary",
+        "url": "https://github.com/giodl73-repo/ZONES",
+        "retrieved_on": "2026-05-26",
+        "vintage": "fixture",
+        "caveats": [
+          "Synthetic boundary graph used only to validate the temporal model contract."
+        ]
+      },
+      {
+        "source_id": "pilot-time-law",
+        "title": "Synthetic non-US time-law pilot",
+        "kind": "legal-text",
+        "url": "https://github.com/giodl73-repo/ZONES",
+        "retrieved_on": "2026-05-26",
+        "vintage": "fixture",
+        "caveats": [
+          "Synthetic authority source; proves shape, not legal truth."
+        ]
+      },
+      {
+        "source_id": "pilot-population",
+        "title": "Synthetic population weights",
+        "kind": "population",
+        "url": "https://github.com/giodl73-repo/ZONES",
+        "retrieved_on": "2026-05-26",
+        "vintage": "fixture",
+        "caveats": [
+          "Synthetic weights for evaluation-context validation only."
+        ]
+      }
+    ]
+  },
+  "jurisdictions": [
+    {
+      "jurisdiction_id": "NP",
+      "name": "Nepal",
+      "source_id": "pilot-boundaries",
+      "temporal_extent": {}
+    },
+    {
+      "jurisdiction_id": "AU",
+      "name": "Australia",
+      "source_id": "pilot-boundaries",
+      "temporal_extent": {}
+    }
+  ],
+  "units": [
+    {
+      "unit_id": "NP-KTM",
+      "jurisdiction_id": "NP",
+      "unit_level": "district",
+      "name": "Kathmandu pilot district",
+      "geometry_ref": "pilot-boundaries#NP-KTM",
+      "representative_point": {
+        "latitude": 27.7172,
+        "longitude": 85.324,
+        "method": "source-provided",
+        "source_id": "pilot-boundaries"
+      },
+      "temporal_extent": {}
+    },
+    {
+      "unit_id": "AU-ADL",
+      "jurisdiction_id": "AU",
+      "unit_level": "municipality",
+      "name": "Adelaide pilot municipality",
+      "geometry_ref": "pilot-boundaries#AU-ADL",
+      "representative_point": {
+        "latitude": -34.9285,
+        "longitude": 138.6007,
+        "method": "source-provided",
+        "source_id": "pilot-boundaries"
+      },
+      "temporal_extent": {}
+    }
+  ],
+  "boundary_graphs": [
+    {
+      "graph_id": "pilot-global-temporal-graph",
+      "unit_universe_id": "pilot-global-temporal-units",
+      "source_id": "pilot-boundaries",
+      "temporal_extent": {},
+      "adjacency": [
+        [],
+        []
+      ]
+    }
+  ],
+  "regimes": [
+    {
+      "regime_id": "nepal-current-law",
+      "authority": "current-law",
+      "jurisdiction_scope": "NP",
+      "source_id": "pilot-time-law",
+      "temporal_extent": {},
+      "assignments": [
+        {
+          "unit_id": "NP-KTM",
+          "zone_id": "NPT",
+          "temporal_extent": {}
+        }
+      ],
+      "offset_rules": [
+        {
+          "rule_id": "npt-current",
+          "zone_id": "NPT",
+          "standard_offset_minutes": 345,
+          "temporal_extent": {},
+          "observance_notes": [
+            "Quarter-hour offset pilot."
+          ]
+        }
+      ]
+    },
+    {
+      "regime_id": "south-australia-current-law",
+      "authority": "current-law",
+      "jurisdiction_scope": "AU-SA",
+      "source_id": "pilot-time-law",
+      "temporal_extent": {},
+      "assignments": [
+        {
+          "unit_id": "AU-ADL",
+          "zone_id": "ACST",
+          "temporal_extent": {}
+        }
+      ],
+      "offset_rules": [
+        {
+          "rule_id": "acst-current",
+          "zone_id": "ACST",
+          "standard_offset_minutes": 570,
+          "temporal_extent": {},
+          "dst_delta_minutes": 60,
+          "transition_rule_ref": "southern-hemisphere-seasonal-dst",
+          "observance_notes": [
+            "Half-hour standard offset with a DST delta pilot."
+          ]
+        }
+      ]
+    }
+  ],
+  "evaluation_contexts": [
+    {
+      "evaluation_period": {},
+      "boundary_graph_id": "pilot-global-temporal-graph",
+      "regime_id": "nepal-current-law",
+      "representative_point_method": "source-provided",
+      "weighting_source_id": "pilot-population",
+      "source_vintage": "fixture"
+    },
+    {
+      "evaluation_period": {},
+      "boundary_graph_id": "pilot-global-temporal-graph",
+      "regime_id": "south-australia-current-law",
+      "representative_point_method": "source-provided",
+      "weighting_source_id": "pilot-population",
+      "source_vintage": "fixture"
+    }
+  ],
+  "caveats": [
+    "Synthetic non-US fixture validates the data contract only; it is not a legal dataset."
+  ]
+}

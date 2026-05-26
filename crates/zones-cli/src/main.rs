@@ -4,7 +4,8 @@ use std::{fs, path::PathBuf};
 use zones_core::{
     evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture, seed_plan_input,
-    seed_source_manifest, seed_zone_catalog, SourceManifest, ZoneCatalog, ZonePlanInput,
+    seed_source_manifest, seed_temporal_dataset, seed_zone_catalog, SourceManifest,
+    TemporalDataset, ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -58,6 +59,11 @@ enum Command {
     SeedZoneCatalog,
     ZoneCatalogReport {
         #[arg(default_value = "data/zone-catalogs/seed-offsets.json")]
+        path: PathBuf,
+    },
+    SeedTemporalDataset,
+    TemporalDatasetReport {
+        #[arg(default_value = "data/temporal-fixtures/non-us-pilot.json")]
         path: PathBuf,
     },
 }
@@ -140,6 +146,18 @@ fn main() -> Result<()> {
             let catalog: ZoneCatalog = serde_json::from_slice(&bytes)
                 .with_context(|| format!("failed to parse {}", path.display()))?;
             let report = catalog.report()?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedTemporalDataset => {
+            let dataset = seed_temporal_dataset();
+            println!("{}", serde_json::to_string_pretty(&dataset)?);
+        }
+        Command::TemporalDatasetReport { path } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let dataset: TemporalDataset = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = dataset.report()?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
     }

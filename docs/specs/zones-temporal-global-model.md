@@ -83,6 +83,22 @@ county baseline is the first implementation target, not the limit of the model.
 - `transition_rule_ref`
 - `observance_notes`
 
+### TemporalDataset
+
+- `dataset_id`
+- embedded `source_manifest`
+- `jurisdictions`
+- `units`
+- `boundary_graphs`
+- `regimes`
+- `evaluation_contexts`
+- `caveats`
+
+The dataset wrapper is the portable fixture and interchange contract. Validation
+requires unique ids, known source references, valid graph dimensions, known
+assignment units and zones, and evaluation contexts that reference known graph
+and regime ids.
+
 ## Evaluation Requirements
 
 Every score must include:
