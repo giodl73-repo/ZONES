@@ -77,6 +77,8 @@ evaluation contexts without claiming to be a legal dataset.
 `data/source-limitation-matrix/global-source-claims.json` records which source
 families can support offset-history, legal-boundary, administrative-boundary,
 metadata, population, and representative-point claims.
+`data/module-boundaries/zones-rplan-rline.json` records which responsibilities
+belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 
 ## Non-goals
 

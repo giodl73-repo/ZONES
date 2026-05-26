@@ -77,6 +77,6 @@ Falsifiers:
 
 - [x] Model separates current law, historical law, proposed scenarios, and
   analytic counterfactuals.
-- [ ] RPLAN/RLINE/ZONES boundaries are explicit.
+- [x] RPLAN/RLINE/ZONES boundaries are explicit.
 - [x] IANA is not described as complete legal-boundary evidence.
 - [x] Non-US pilot caveats are visible.

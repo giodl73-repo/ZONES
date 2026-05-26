@@ -20,3 +20,7 @@ before US county baseline claims move beyond seed-fixture status.
   must not depend on BISECT application internals.
 - Raw GIS/source cache bytes stay out of git unless a source policy explicitly
   allows a small committed fixture.
+
+The checked contract for these boundaries lives at
+`data/module-boundaries/zones-rplan-rline.json` and can be summarized with
+`zones module-boundary-report`.

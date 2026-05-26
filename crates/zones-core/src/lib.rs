@@ -113,6 +113,38 @@ pub struct SourceLimitationMatrixReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModuleBoundaryEntry {
+    pub module_id: String,
+    pub owns: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub must_not_own: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub upstream_dependencies: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub downstream_consumers: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModuleBoundaryContract {
+    pub contract_id: String,
+    pub generated_on: String,
+    pub entries: Vec<ModuleBoundaryEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModuleBoundaryReport {
+    pub contract_id: String,
+    pub module_count: usize,
+    pub ownership_statement_count: usize,
+    pub exclusion_statement_count: usize,
+    pub dependency_edge_count: usize,
+    pub downstream_edge_count: usize,
+    pub caveat_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZoneCatalog {
     pub catalog_id: String,
     pub source_manifest_id: String,
@@ -371,10 +403,14 @@ pub enum TemporalModelError {
     DuplicateSourceId { source_id: String },
     #[error("source limitation matrix contains duplicate source id {source_id}")]
     DuplicateSourceLimitationSourceId { source_id: String },
+    #[error("module boundary contract contains duplicate module id {module_id}")]
+    DuplicateModuleBoundaryModuleId { module_id: String },
     #[error("source {source_id} has empty URL")]
     EmptySourceUrl { source_id: String },
     #[error("source limitation entry {source_id} has no assessments")]
     EmptySourceAssessments { source_id: String },
+    #[error("module boundary entry {module_id} has no ownership statements")]
+    EmptyModuleOwnership { module_id: String },
     #[error("{owner_kind} references unknown source id {source_id}")]
     UnknownSourceReference {
         owner_kind: &'static str,
@@ -529,6 +565,72 @@ impl SourceLimitationMatrix {
             }
         }
         Ok(report)
+    }
+}
+
+impl ModuleBoundaryEntry {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("module_boundary_entry.module_id", &self.module_id)?;
+        if self.owns.is_empty() {
+            return Err(TemporalModelError::EmptyModuleOwnership {
+                module_id: self.module_id.clone(),
+            });
+        }
+        for statement in &self.owns {
+            validate_non_empty("module_boundary_entry.owns", statement)?;
+        }
+        for statement in &self.must_not_own {
+            validate_non_empty("module_boundary_entry.must_not_own", statement)?;
+        }
+        for dependency in &self.upstream_dependencies {
+            validate_non_empty("module_boundary_entry.upstream_dependencies", dependency)?;
+        }
+        for consumer in &self.downstream_consumers {
+            validate_non_empty("module_boundary_entry.downstream_consumers", consumer)?;
+        }
+        Ok(())
+    }
+}
+
+impl ModuleBoundaryContract {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("module_boundary_contract.contract_id", &self.contract_id)?;
+        validate_non_empty("module_boundary_contract.generated_on", &self.generated_on)?;
+        let mut module_ids = BTreeSet::new();
+        for entry in &self.entries {
+            entry.validate()?;
+            if !module_ids.insert(entry.module_id.as_str()) {
+                return Err(TemporalModelError::DuplicateModuleBoundaryModuleId {
+                    module_id: entry.module_id.clone(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn report(&self) -> Result<ModuleBoundaryReport, TemporalModelError> {
+        self.validate()?;
+        Ok(ModuleBoundaryReport {
+            contract_id: self.contract_id.clone(),
+            module_count: self.entries.len(),
+            ownership_statement_count: self.entries.iter().map(|entry| entry.owns.len()).sum(),
+            exclusion_statement_count: self
+                .entries
+                .iter()
+                .map(|entry| entry.must_not_own.len())
+                .sum(),
+            dependency_edge_count: self
+                .entries
+                .iter()
+                .map(|entry| entry.upstream_dependencies.len())
+                .sum(),
+            downstream_edge_count: self
+                .entries
+                .iter()
+                .map(|entry| entry.downstream_consumers.len())
+                .sum(),
+            caveat_count: self.caveats.len(),
+        })
     }
 }
 
@@ -1825,6 +1927,78 @@ pub fn seed_source_limitation_matrix() -> SourceLimitationMatrix {
     }
 }
 
+pub fn seed_module_boundary_contract() -> ModuleBoundaryContract {
+    ModuleBoundaryContract {
+        contract_id: "zones-module-boundaries-v0".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        entries: vec![
+            ModuleBoundaryEntry {
+                module_id: "rline".to_string(),
+                owns: vec![
+                    "Reusable graph kernels and connectivity metrics.".to_string(),
+                    "Generic statistical or optimization primitives with no civic-time semantics."
+                        .to_string(),
+                ],
+                must_not_own: vec![
+                    "Time-zone legal authority or solar-time policy assumptions.".to_string(),
+                    "ZONES source caveats, scenario labels, or civil-time scoring definitions."
+                        .to_string(),
+                ],
+                upstream_dependencies: vec![],
+                downstream_consumers: vec!["rplan".to_string(), "zones".to_string()],
+            },
+            ModuleBoundaryEntry {
+                module_id: "rplan".to_string(),
+                owns: vec![
+                    "Portable legal-boundary unit graph and context contracts.".to_string(),
+                    "Unit ids, adjacency, populations, source hashes, and assignment carriers."
+                        .to_string(),
+                ],
+                must_not_own: vec![
+                    "Time-zone reform recommendations.".to_string(),
+                    "Solar-noon error scoring or DST scenario semantics.".to_string(),
+                ],
+                upstream_dependencies: vec!["rline".to_string()],
+                downstream_consumers: vec!["zones".to_string()],
+            },
+            ModuleBoundaryEntry {
+                module_id: "zones".to_string(),
+                owns: vec![
+                    "Civil-time regimes, offset rules, DST deltas, and scenario labels."
+                        .to_string(),
+                    "Solar-time scoring, source limitation matrices, and time-zone research artifacts."
+                        .to_string(),
+                    "Mappings from RPLAN contexts into time-zone plan evaluations.".to_string(),
+                ],
+                must_not_own: vec![
+                    "Generic graph-kernel implementations that belong in RLINE.".to_string(),
+                    "Reusable non-time-zone redistricting context semantics that belong in RPLAN."
+                        .to_string(),
+                ],
+                upstream_dependencies: vec!["rline".to_string(), "rplan".to_string()],
+                downstream_consumers: vec![],
+            },
+            ModuleBoundaryEntry {
+                module_id: "bisect".to_string(),
+                owns: vec![
+                    "Election/redistricting application precedent and Census/GEOID implementation examples."
+                        .to_string(),
+                ],
+                must_not_own: vec![
+                    "New ZONES time-zone policy logic.".to_string(),
+                    "Shared boundary contracts that should be promoted into RPLAN.".to_string(),
+                ],
+                upstream_dependencies: vec!["rline".to_string(), "rplan".to_string()],
+                downstream_consumers: vec!["zones-reference-only".to_string()],
+            },
+        ],
+        caveats: vec![
+            "This contract is architectural guidance; it does not prevent future extraction of reusable ZONES components into shared crates."
+                .to_string(),
+        ],
+    }
+}
+
 pub fn seed_zone_catalog() -> ZoneCatalog {
     ZoneCatalog {
         catalog_id: "zones-seed-offset-catalog".to_string(),
@@ -2613,6 +2787,43 @@ mod tests {
             matrix.validate(),
             Err(TemporalModelError::DuplicateSourceLimitationSourceId {
                 source_id: "iana-tzdb".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn seed_module_boundary_contract_reports_ownership() {
+        let report = seed_module_boundary_contract().report().unwrap();
+
+        assert_eq!(report.contract_id, "zones-module-boundaries-v0");
+        assert_eq!(report.module_count, 4);
+        assert_eq!(report.ownership_statement_count, 8);
+        assert_eq!(report.exclusion_statement_count, 8);
+        assert_eq!(report.dependency_edge_count, 5);
+        assert_eq!(report.downstream_edge_count, 4);
+        assert_eq!(report.caveat_count, 1);
+    }
+
+    #[test]
+    fn committed_module_boundary_contract_matches_seed_contract() {
+        let contract: ModuleBoundaryContract = serde_json::from_str(include_str!(
+            "../../../data/module-boundaries/zones-rplan-rline.json"
+        ))
+        .unwrap();
+
+        assert_eq!(contract, seed_module_boundary_contract());
+        assert!(contract.report().is_ok());
+    }
+
+    #[test]
+    fn module_boundary_contract_rejects_empty_ownership() {
+        let mut contract = seed_module_boundary_contract();
+        contract.entries[0].owns.clear();
+
+        assert_eq!(
+            contract.validate(),
+            Err(TemporalModelError::EmptyModuleOwnership {
+                module_id: "rline".to_string(),
             })
         );
     }

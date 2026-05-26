@@ -1,0 +1,74 @@
+{
+  "contract_id": "zones-module-boundaries-v0",
+  "generated_on": "2026-05-26",
+  "entries": [
+    {
+      "module_id": "rline",
+      "owns": [
+        "Reusable graph kernels and connectivity metrics.",
+        "Generic statistical or optimization primitives with no civic-time semantics."
+      ],
+      "must_not_own": [
+        "Time-zone legal authority or solar-time policy assumptions.",
+        "ZONES source caveats, scenario labels, or civil-time scoring definitions."
+      ],
+      "downstream_consumers": [
+        "rplan",
+        "zones"
+      ]
+    },
+    {
+      "module_id": "rplan",
+      "owns": [
+        "Portable legal-boundary unit graph and context contracts.",
+        "Unit ids, adjacency, populations, source hashes, and assignment carriers."
+      ],
+      "must_not_own": [
+        "Time-zone reform recommendations.",
+        "Solar-noon error scoring or DST scenario semantics."
+      ],
+      "upstream_dependencies": [
+        "rline"
+      ],
+      "downstream_consumers": [
+        "zones"
+      ]
+    },
+    {
+      "module_id": "zones",
+      "owns": [
+        "Civil-time regimes, offset rules, DST deltas, and scenario labels.",
+        "Solar-time scoring, source limitation matrices, and time-zone research artifacts.",
+        "Mappings from RPLAN contexts into time-zone plan evaluations."
+      ],
+      "must_not_own": [
+        "Generic graph-kernel implementations that belong in RLINE.",
+        "Reusable non-time-zone redistricting context semantics that belong in RPLAN."
+      ],
+      "upstream_dependencies": [
+        "rline",
+        "rplan"
+      ]
+    },
+    {
+      "module_id": "bisect",
+      "owns": [
+        "Election/redistricting application precedent and Census/GEOID implementation examples."
+      ],
+      "must_not_own": [
+        "New ZONES time-zone policy logic.",
+        "Shared boundary contracts that should be promoted into RPLAN."
+      ],
+      "upstream_dependencies": [
+        "rline",
+        "rplan"
+      ],
+      "downstream_consumers": [
+        "zones-reference-only"
+      ]
+    }
+  ],
+  "caveats": [
+    "This contract is architectural guidance; it does not prevent future extraction of reusable ZONES components into shared crates."
+  ]
+}

@@ -3,8 +3,9 @@ use clap::{Parser, Subcommand};
 use std::{fs, path::PathBuf};
 use zones_core::{
     evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
-    evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture, seed_plan_input,
-    seed_source_limitation_matrix, seed_source_manifest, seed_temporal_dataset, seed_zone_catalog,
+    evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
+    seed_module_boundary_contract, seed_plan_input, seed_source_limitation_matrix,
+    seed_source_manifest, seed_temporal_dataset, seed_zone_catalog, ModuleBoundaryContract,
     SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
 };
 
@@ -69,6 +70,11 @@ enum Command {
     SeedSourceLimitationMatrix,
     SourceLimitationReport {
         #[arg(default_value = "data/source-limitation-matrix/global-source-claims.json")]
+        path: PathBuf,
+    },
+    SeedModuleBoundaries,
+    ModuleBoundaryReport {
+        #[arg(default_value = "data/module-boundaries/zones-rplan-rline.json")]
         path: PathBuf,
     },
 }
@@ -175,6 +181,18 @@ fn main() -> Result<()> {
             let matrix: SourceLimitationMatrix = serde_json::from_slice(&bytes)
                 .with_context(|| format!("failed to parse {}", path.display()))?;
             let report = matrix.report()?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedModuleBoundaries => {
+            let contract = seed_module_boundary_contract();
+            println!("{}", serde_json::to_string_pretty(&contract)?);
+        }
+        Command::ModuleBoundaryReport { path } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let contract: ModuleBoundaryContract = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = contract.report()?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
     }
