@@ -44,6 +44,16 @@ enum Command {
         #[arg(long, default_value_t = 60)]
         dst_delta_minutes: i32,
     },
+    WriteOffsetFit {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        dst_delta_minutes: i32,
+        #[arg(long, default_value = "target/zones/seed-offset-fit.json")]
+        output: PathBuf,
+        #[arg(long, default_value = "target/zones/seed-offset-fit-units.csv")]
+        unit_scores_csv: PathBuf,
+    },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
@@ -132,6 +142,22 @@ fn main() -> Result<()> {
                 .with_context(|| format!("failed to parse {}", path.display()))?;
             let report = evaluate_offset_fit(&input, dst_delta_minutes)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::WriteOffsetFit {
+            path,
+            dst_delta_minutes,
+            output,
+            unit_scores_csv,
+        } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = evaluate_offset_fit(&input, dst_delta_minutes)?;
+            write_json(&output, &report)?;
+            write_offset_fit_units_csv(&unit_scores_csv, &report.unit_scores)?;
+            println!("{}", output.display());
+            println!("{}", unit_scores_csv.display());
         }
         Command::WriteEvaluation {
             path,
@@ -301,6 +327,51 @@ fn write_zone_summaries_csv(path: &PathBuf, summaries: &[zones_core::ZoneSummary
             summary.moved_population,
             summary.weighted_mean_absolute_error_minutes,
             summary.max_absolute_error_minutes
+        ));
+    }
+    fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(())
+}
+
+fn write_offset_fit_units_csv(
+    path: &PathBuf,
+    scores: &[zones_core::OffsetFitUnitScore],
+) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create output directory {}", parent.display()))?;
+    }
+    let mut ranked_scores = scores.to_vec();
+    ranked_scores.sort_by(|left, right| {
+        right
+            .current_standard_error_minutes
+            .partial_cmp(&left.current_standard_error_minutes)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| right.population.cmp(&left.population))
+            .then_with(|| left.unit_id.cmp(&right.unit_id))
+    });
+    let mut csv = String::from(
+        "rank,unit_id,unit_name,population,solar_offset_minutes,current_zone_id,current_standard_offset_minutes,current_standard_error_minutes,current_dst_offset_minutes,current_dst_error_minutes,best_whole_hour_offset_minutes,best_whole_hour_error_minutes,best_half_hour_offset_minutes,best_half_hour_error_minutes,best_quarter_hour_offset_minutes,best_quarter_hour_error_minutes\n",
+    );
+    for (rank, score) in ranked_scores.iter().enumerate() {
+        csv.push_str(&format!(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+            rank + 1,
+            csv_cell(&score.unit_id),
+            csv_cell(&score.unit_name),
+            score.population,
+            score.solar_offset_minutes,
+            csv_cell(&score.current_zone_id),
+            score.current_standard_offset_minutes,
+            score.current_standard_error_minutes,
+            score.current_dst_offset_minutes,
+            score.current_dst_error_minutes,
+            score.best_whole_hour_offset_minutes,
+            score.best_whole_hour_error_minutes,
+            score.best_half_hour_offset_minutes,
+            score.best_half_hour_error_minutes,
+            score.best_quarter_hour_offset_minutes,
+            score.best_quarter_hour_error_minutes,
         ));
     }
     fs::write(path, csv).with_context(|| format!("failed to write {}", path.display()))?;

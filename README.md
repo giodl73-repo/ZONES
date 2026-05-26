@@ -83,6 +83,8 @@ belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 `offset-fit` compares current assigned offsets against the nearest whole-hour,
 half-hour, and quarter-hour offset for each unit. It also reports DST-shifted
 clock error with a configurable `--dst-delta-minutes` value.
+`write-offset-fit` writes the same report plus a ranked per-unit CSV under
+`target/zones/` by default.
 
 ## Non-goals
 
