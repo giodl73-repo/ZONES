@@ -1,13 +1,15 @@
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::{fs, path::PathBuf};
 use zones_core::{
-    attach_geojson_geometries, evaluate_offset_fit, evaluate_zone_plan,
-    evaluate_zone_plan_evaluation_with_catalog, evaluate_zone_plan_input_with_manifest_and_catalog,
-    seed_fixture, seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
+    attach_geojson_geometries, build_offset_candidate_plan, evaluate_offset_fit,
+    evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
+    evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
+    seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_limitation_matrix, seed_source_manifest, seed_temporal_dataset, seed_zone_catalog,
-    GeometryJoinOptions, ModuleBoundaryContract, OffsetMapRenderOptions, OffsetMapView,
-    SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
+    GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions,
+    OffsetMapView, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
+    ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -16,6 +18,23 @@ use zones_core::{
 struct Cli {
     #[command(subcommand)]
     command: Command,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum CandidateGridArg {
+    WholeHour,
+    HalfHour,
+    QuarterHour,
+}
+
+impl From<CandidateGridArg> for OffsetCandidateGrid {
+    fn from(value: CandidateGridArg) -> Self {
+        match value {
+            CandidateGridArg::WholeHour => Self::WholeHour,
+            CandidateGridArg::HalfHour => Self::HalfHour,
+            CandidateGridArg::QuarterHour => Self::QuarterHour,
+        }
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -78,6 +97,14 @@ enum Command {
         #[arg(long, default_value_t = 60)]
         dst_delta_minutes: i32,
         #[arg(long, default_value = "target/zones/seed-offset-fit.geojson")]
+        output: PathBuf,
+    },
+    WriteOffsetCandidatePlan {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, value_enum, default_value_t = CandidateGridArg::HalfHour)]
+        grid: CandidateGridArg,
+        #[arg(long, default_value = "target/zones/offset-candidate-plan.json")]
         output: PathBuf,
     },
     AttachGeojsonGeometries {
@@ -278,6 +305,15 @@ fn main() -> Result<()> {
             }
             fs::write(&output, zones_core::render_offset_fit_geojson(&report))
                 .with_context(|| format!("failed to write {}", output.display()))?;
+            println!("{}", output.display());
+        }
+        Command::WriteOffsetCandidatePlan { path, grid, output } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let candidate = build_offset_candidate_plan(&input, grid.into())?;
+            write_json(&output, &candidate)?;
             println!("{}", output.display());
         }
         Command::AttachGeojsonGeometries {

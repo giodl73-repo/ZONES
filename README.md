@@ -92,6 +92,8 @@ half-hour, and quarter-hour options.
 page.
 `write-offset-geojson` exports the same offset-fit fields as GeoJSON for GIS
 inspection and later boundary joins.
+`write-offset-candidate-plan` materializes nearest-offset alternatives as real
+plan inputs for whole-hour, half-hour, or quarter-hour grids.
 When plan units include `map_geometry` polygons or multipolygons, GeoJSON emits
 those shapes. If only `map_point` coordinates are present, it emits
 representative points; otherwise it falls back to schematic points derived from

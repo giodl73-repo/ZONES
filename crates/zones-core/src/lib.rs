@@ -1236,6 +1236,40 @@ pub struct OffsetFitReport {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+pub enum OffsetCandidateGrid {
+    WholeHour,
+    HalfHour,
+    QuarterHour,
+}
+
+impl OffsetCandidateGrid {
+    pub fn step_minutes(self) -> i32 {
+        match self {
+            Self::WholeHour => 60,
+            Self::HalfHour => 30,
+            Self::QuarterHour => 15,
+        }
+    }
+
+    pub fn slug(self) -> &'static str {
+        match self {
+            Self::WholeHour => "whole-hour",
+            Self::HalfHour => "half-hour",
+            Self::QuarterHour => "quarter-hour",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::WholeHour => "whole-hour",
+            Self::HalfHour => "half-hour",
+            Self::QuarterHour => "quarter-hour",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum OffsetMapView {
     CurrentStandard,
     CurrentDst,
@@ -1703,6 +1737,57 @@ pub fn evaluate_offset_fit(
     })
 }
 
+pub fn build_offset_candidate_plan(
+    input: &ZonePlanInput,
+    grid: OffsetCandidateGrid,
+) -> Result<ZonePlanInput, ZonePlanError> {
+    validate_non_empty_plan("zone_plan_input.input_id", &input.input_id)?;
+    validate_non_empty_plan(
+        "zone_plan_input.source_manifest_id",
+        &input.source_manifest_id,
+    )?;
+    validate_scenario_shape(&input.scenario)?;
+    validate_inputs(&input.units, &input.adjacency, &input.plan)?;
+
+    let mut zone_index_by_offset = BTreeMap::new();
+    let mut assignment = Vec::with_capacity(input.units.len());
+    for unit in &input.units {
+        let (offset, _) = best_candidate_offset(unit.solar_offset_minutes, grid.step_minutes());
+        let next_index = zone_index_by_offset.len();
+        let zone_index = *zone_index_by_offset.entry(offset).or_insert(next_index);
+        assignment.push(zone_index);
+    }
+
+    let zones = zone_index_by_offset
+        .into_keys()
+        .map(|offset| ZoneSpec {
+            id: offset_zone_id(offset),
+            utc_offset_minutes: offset,
+        })
+        .collect();
+    let mut candidate = input.clone();
+    candidate.input_id = format!("{}-{}", input.input_id, grid.slug());
+    candidate.scenario = ZoneScenario {
+        scenario_id: format!("{}-{}", input.scenario.scenario_id, grid.slug()),
+        kind: ZoneScenarioKind::AnalyticCounterfactual,
+        label: format!("{} candidate offset grid", grid.label()),
+        authority_source_id: None,
+    };
+    candidate.plan = ZonePlan {
+        name: format!("{} {} candidate", input.plan.name, grid.label()),
+        zones,
+        assignment,
+    };
+    candidate.reference_assignment = Vec::new();
+    candidate.caveats.push(format!(
+        "Generated analytic counterfactual from {} using nearest {} UTC offsets.",
+        input.input_id,
+        grid.label()
+    ));
+    evaluate_zone_plan_input(&candidate)?;
+    Ok(candidate)
+}
+
 pub fn render_offset_fit_svg(
     report: &OffsetFitReport,
     view: OffsetMapView,
@@ -2066,6 +2151,12 @@ fn format_offset(offset_minutes: i32) -> String {
     let sign = if offset_minutes < 0 { "-" } else { "+" };
     let absolute = offset_minutes.abs();
     format!("UTC{sign}{:02}:{:02}", absolute / 60, absolute % 60)
+}
+
+fn offset_zone_id(offset_minutes: i32) -> String {
+    let sign = if offset_minutes < 0 { "minus" } else { "plus" };
+    let absolute = offset_minutes.abs();
+    format!("utc-{sign}-{:02}-{:02}", absolute / 60, absolute % 60)
 }
 
 fn escape_xml(value: &str) -> String {
@@ -3356,6 +3447,58 @@ mod tests {
         assert!(geojson.contains("\"type\":\"Polygon\""));
         assert!(geojson.contains("geometry from plan input"));
         assert!(geojson.contains("[-88.100000,41.400000]"));
+    }
+
+    #[test]
+    fn offset_candidate_plan_builds_whole_hour_grid() {
+        let candidate =
+            build_offset_candidate_plan(&seed_plan_input(), OffsetCandidateGrid::WholeHour)
+                .unwrap();
+
+        assert_eq!(
+            candidate.scenario.kind,
+            ZoneScenarioKind::AnalyticCounterfactual
+        );
+        assert_eq!(candidate.scenario.authority_source_id, None);
+        assert_eq!(candidate.plan.assignment, vec![0, 0, 1, 1]);
+        assert_eq!(
+            candidate
+                .plan
+                .zones
+                .iter()
+                .map(|zone| zone.utc_offset_minutes)
+                .collect::<Vec<_>>(),
+            vec![-360, -300]
+        );
+        assert!(candidate.reference_assignment.is_empty());
+        assert!(evaluate_zone_plan_input(&candidate).is_ok());
+    }
+
+    #[test]
+    fn offset_candidate_plan_builds_quarter_hour_grid() {
+        let candidate =
+            build_offset_candidate_plan(&seed_plan_input(), OffsetCandidateGrid::QuarterHour)
+                .unwrap();
+
+        assert_eq!(candidate.plan.assignment, vec![0, 1, 2, 3]);
+        assert_eq!(
+            candidate
+                .plan
+                .zones
+                .iter()
+                .map(|zone| (zone.id.as_str(), zone.utc_offset_minutes))
+                .collect::<Vec<_>>(),
+            vec![
+                ("utc-minus-06-00", -360),
+                ("utc-minus-05-45", -345),
+                ("utc-minus-05-00", -300),
+                ("utc-minus-04-45", -285),
+            ]
+        );
+        assert!(candidate
+            .caveats
+            .iter()
+            .any(|caveat| caveat.contains("nearest quarter-hour UTC offsets")));
     }
 
     #[test]
