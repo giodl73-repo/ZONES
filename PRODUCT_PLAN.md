@@ -77,6 +77,7 @@ cargo test --workspace
 cargo run -p zones-cli -- seed-report
 cargo run -p zones-cli -- evaluate-plan
 cargo run -p zones-cli -- evaluate-plan-detail
+cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 git diff --check
 ```

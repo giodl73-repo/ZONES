@@ -31,6 +31,14 @@ enum Command {
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
     },
+    WriteEvaluation {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
+        source_manifest: PathBuf,
+        #[arg(long, default_value = "target/zones/seed-evaluation.json")]
+        output: PathBuf,
+    },
     SeedSources,
     SourceReport {
         #[arg(default_value = "data/source-manifests/us-foundation.json")]
@@ -69,6 +77,16 @@ fn main() -> Result<()> {
             let evaluation = evaluate_zone_plan_evaluation(&input, &manifest)?;
             println!("{}", serde_json::to_string_pretty(&evaluation)?);
         }
+        Command::WriteEvaluation {
+            path,
+            source_manifest,
+            output,
+        } => {
+            let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
+            let evaluation = evaluate_zone_plan_evaluation(&input, &manifest)?;
+            write_json(&output, &evaluation)?;
+            println!("{}", output.display());
+        }
         Command::SeedSources => {
             let manifest = seed_source_manifest();
             println!("{}", serde_json::to_string_pretty(&manifest)?);
@@ -105,4 +123,15 @@ fn read_plan_and_manifest(
         )
     })?;
     Ok((input, manifest))
+}
+
+fn write_json<T: serde::Serialize>(path: &PathBuf, value: &T) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create output directory {}", parent.display()))?;
+    }
+    let json = serde_json::to_string_pretty(value)?;
+    fs::write(path, format!("{json}\n"))
+        .with_context(|| format!("failed to write {}", path.display()))?;
+    Ok(())
 }

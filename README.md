@@ -44,6 +44,7 @@ they had to follow state, county, or equivalent boundaries?
 cargo run -p zones-cli -- seed-report
 cargo run -p zones-cli -- evaluate-plan
 cargo run -p zones-cli -- evaluate-plan-detail
+cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 ```
 
@@ -53,7 +54,8 @@ shape. The evaluate-plan command runs the same contract from a JSON input file,
 checks that the named source manifest matches, and then scores the plan. The
 detail variant also emits per-unit error rows and propagated caveats. The source
 report validates the first committed source manifest and summarizes which source
-categories are currently covered.
+categories are currently covered. Generated evaluation artifacts are written
+under `target/` by default and are intentionally not committed.
 
 ## Non-goals
 
