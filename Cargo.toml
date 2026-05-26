@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "crates/zones-core",
+    "crates/zones-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["giodl73"]
+license = "MIT"
+repository = "https://github.com/giodl73-repo/ZONES"
+
+[workspace.dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+rgraph-core = { git = "https://github.com/giodl73-repo/RLINE", rev = "e4acc3dcc4eae47fcc3fd30f946ce0f136aa45b8" }
+rplan-core = { git = "https://github.com/giodl73-repo/RPLAN", rev = "be9456a7a5eba21d8a350c2f9fb539bc4bcd7838" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+zones-core = { path = "crates/zones-core" }

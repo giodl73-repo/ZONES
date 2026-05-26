@@ -1,0 +1,24 @@
+title: "Mapping Civil-Time Error: A County-Level Solar-Noon Baseline for US Time Zones"
+paper_type: "Measurement baseline"
+venue: "TBD geography / public policy"
+stage: plan
+round: 0
+abstract_summary: "Planned empirical baseline measuring US county-level standard-time and DST-period solar-noon deviation using RPLAN-compatible county units and source-backed legal time-zone assignments."
+keywords:
+  - time zones
+  - solar noon
+  - daylight saving time
+  - county geography
+  - civil time
+reviewers:
+  - name: "Solar Time Methodologist"
+    expertise: "solar-time formulas and DST scenario framing"
+  - name: "Boundary Data Steward"
+    expertise: "county units, GEOID/FIPS, and source provenance"
+  - name: "Civil Time Policy Reviewer"
+    expertise: "legal authority and recommendation caveats"
+  - name: "Public Map Editor"
+    expertise: "map interpretation and public communication"
+reviews_completed: 0
+reviews_total: 4
+p1_items: []

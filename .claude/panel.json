@@ -1,0 +1,47 @@
+{
+  "default": "track-A",
+  "pluginRoot": "C:/src/panel",
+  "gitStrategy": "manual",
+  "projects": {
+    "track-A": {
+      "projectName": "track-A",
+      "researchPath": "research/tracks/A-measurement-baseline",
+      "publicationsPath": "research",
+      "panelPath": "context/panel/track-A",
+      "clientSlug": "track-A",
+      "description": "Track A: Measurement and baseline — civil-time error, county deviation atlas, DST shift analysis"
+    },
+    "track-B": {
+      "projectName": "track-B",
+      "researchPath": "research/tracks/B-source-temporal-model",
+      "publicationsPath": "research",
+      "panelPath": "context/panel/track-B",
+      "clientSlug": "track-B",
+      "description": "Track B: Source and temporal data model — boundary sources, time-versioned regimes, global time-rule data"
+    },
+    "track-C": {
+      "projectName": "track-C",
+      "researchPath": "research/tracks/C-optimization-scenarios",
+      "publicationsPath": "research",
+      "panelPath": "context/panel/track-C",
+      "clientSlug": "track-C",
+      "description": "Track C: Optimization and scenario families — candidate search, minimum-change plans, state/county tradeoffs"
+    },
+    "track-D": {
+      "projectName": "track-D",
+      "researchPath": "research/tracks/D-law-policy",
+      "publicationsPath": "research",
+      "panelPath": "context/panel/track-D",
+      "clientSlug": "track-D",
+      "description": "Track D: Law and DOT convenience — authority, commerce criteria, disruption metrics, reform pathways"
+    },
+    "track-E": {
+      "projectName": "track-E",
+      "researchPath": "research/tracks/E-global-historical",
+      "publicationsPath": "research",
+      "panelPath": "context/panel/track-E",
+      "clientSlug": "track-E",
+      "description": "Track E: Global and historical systems — comparative country pilots, historical regimes, worldwide source limits"
+    }
+  }
+}

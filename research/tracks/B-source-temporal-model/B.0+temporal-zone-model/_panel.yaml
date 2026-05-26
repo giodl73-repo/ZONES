@@ -1,0 +1,24 @@
+title: "A Temporal Data Model for Civil Time-Zone Boundaries"
+paper_type: "Data model / reproducibility contract"
+venue: "TBD GIS / data systems"
+stage: plan
+round: 0
+abstract_summary: "Planned methods paper defining country-neutral, time-versioned entities for administrative boundary units, time-zone regimes, UTC offset rules, DST transitions, and evaluation contexts."
+keywords:
+  - time-zone data
+  - temporal GIS
+  - boundary units
+  - IANA tzdb
+  - reproducibility
+reviewers:
+  - name: "Boundary Data Steward"
+    expertise: "administrative boundary data and provenance"
+  - name: "Temporal Database Reviewer"
+    expertise: "versioned entities and validity intervals"
+  - name: "Time Standards Reviewer"
+    expertise: "UTC offsets, DST rules, time-zone data"
+  - name: "Reproducibility Engineer"
+    expertise: "source manifests and validation"
+reviews_completed: 0
+reviews_total: 4
+p1_items: []
