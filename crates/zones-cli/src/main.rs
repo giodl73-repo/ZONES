@@ -4,10 +4,10 @@ use std::{fs, path::PathBuf};
 use zones_core::{
     evaluate_offset_fit, evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
-    seed_module_boundary_contract, seed_plan_input, seed_source_limitation_matrix,
-    seed_source_manifest, seed_temporal_dataset, seed_zone_catalog, ModuleBoundaryContract,
-    OffsetMapRenderOptions, OffsetMapView, SourceLimitationMatrix, SourceManifest, TemporalDataset,
-    ZoneCatalog, ZonePlanInput,
+    seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
+    seed_source_limitation_matrix, seed_source_manifest, seed_temporal_dataset, seed_zone_catalog,
+    ModuleBoundaryContract, OffsetMapRenderOptions, OffsetMapView, SourceLimitationMatrix,
+    SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -23,6 +23,7 @@ enum Command {
     Status,
     SeedReport,
     SeedPlanInput,
+    SeedPlanInputMapPoints,
     EvaluatePlan {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
@@ -133,6 +134,10 @@ fn main() -> Result<()> {
         }
         Command::SeedPlanInput => {
             let input = seed_plan_input();
+            println!("{}", serde_json::to_string_pretty(&input)?);
+        }
+        Command::SeedPlanInputMapPoints => {
+            let input = seed_plan_input_with_map_points();
             println!("{}", serde_json::to_string_pretty(&input)?);
         }
         Command::EvaluatePlan {

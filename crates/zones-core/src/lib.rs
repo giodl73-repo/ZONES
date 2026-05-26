@@ -1533,20 +1533,35 @@ pub fn render_offset_fit_svg(
     let bottom = 92.0;
     let plot_width = width as f64 - left - right;
     let plot_height = height as f64 - top - bottom;
-    let min_offset = report
+    let points = offset_map_points(report);
+    let has_real_points = report
         .unit_scores
         .iter()
-        .map(|score| score.solar_offset_minutes)
+        .any(|score| score.map_point.is_some());
+    let min_x = points
+        .iter()
+        .map(|point| point.x)
         .fold(f64::INFINITY, f64::min)
         .floor()
-        - 30.0;
-    let max_offset = report
-        .unit_scores
+        - if has_real_points { 2.0 } else { 30.0 };
+    let max_x = points
         .iter()
-        .map(|score| score.solar_offset_minutes)
+        .map(|point| point.x)
         .fold(f64::NEG_INFINITY, f64::max)
         .ceil()
-        + 30.0;
+        + if has_real_points { 2.0 } else { 30.0 };
+    let min_y = points
+        .iter()
+        .map(|point| point.y)
+        .fold(f64::INFINITY, f64::min)
+        .floor()
+        - 2.0;
+    let max_y = points
+        .iter()
+        .map(|point| point.y)
+        .fold(f64::NEG_INFINITY, f64::max)
+        .ceil()
+        + 2.0;
     let max_error = report
         .unit_scores
         .iter()
@@ -1565,7 +1580,7 @@ pub fn render_offset_fit_svg(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {width} {height}\" role=\"img\" aria-labelledby=\"title desc\">\n"
     ));
     svg.push_str(&format!(
-        "<title>{}</title>\n<desc>Schematic offset-fit map for {} units. X position is solar offset; color is absolute clock error.</desc>\n",
+        "<title>{}</title>\n<desc>Offset-fit map for {} units. Color is absolute clock error.</desc>\n",
         escape_xml(view.title()),
         report.unit_count
     ));
@@ -1574,9 +1589,15 @@ pub fn render_offset_fit_svg(
         "<text x=\"32\" y=\"42\" font-family=\"system-ui, sans-serif\" font-size=\"24\" font-weight=\"700\" fill=\"#111827\">{}</text>\n",
         escape_xml(view.title())
     ));
+    let geometry_note = if has_real_points {
+        "using plan map_point coordinates where available"
+    } else {
+        "schematic until geometry-backed boundaries are available"
+    };
     svg.push_str(&format!(
-        "<text x=\"32\" y=\"68\" font-family=\"system-ui, sans-serif\" font-size=\"13\" fill=\"#475569\">input: {} | schematic until geometry-backed boundaries are available</text>\n",
-        escape_xml(&report.input_id)
+        "<text x=\"32\" y=\"68\" font-family=\"system-ui, sans-serif\" font-size=\"13\" fill=\"#475569\">input: {} | {}</text>\n",
+        escape_xml(&report.input_id),
+        geometry_note
     ));
     svg.push_str(&format!(
         "<line x1=\"{left}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"#cbd5e1\" stroke-width=\"1\"/>\n",
@@ -1585,19 +1606,14 @@ pub fn render_offset_fit_svg(
         height as f64 - bottom
     ));
     svg.push_str(&format!(
-        "<text x=\"{}\" y=\"{}\" font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#475569\">solar offset minutes from UTC</text>\n",
+        "<text x=\"{}\" y=\"{}\" font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#475569\">{}</text>\n",
         left,
-        height as f64 - 28.0
+        height as f64 - 28.0,
+        if has_real_points { "longitude" } else { "solar offset minutes from UTC" }
     ));
 
-    for marker in offset_axis_markers(min_offset, max_offset) {
-        let x = scale(
-            marker as f64,
-            min_offset,
-            max_offset,
-            left,
-            left + plot_width,
-        );
+    for marker in offset_axis_markers(min_x, max_x, has_real_points) {
+        let x = scale(marker as f64, min_x, max_x, left, left + plot_width);
         svg.push_str(&format!(
             "<line x1=\"{x:.2}\" y1=\"{top}\" x2=\"{x:.2}\" y2=\"{}\" stroke=\"#e2e8f0\" stroke-width=\"1\"/>\n",
             height as f64 - bottom
@@ -1605,20 +1621,14 @@ pub fn render_offset_fit_svg(
         svg.push_str(&format!(
             "<text x=\"{x:.2}\" y=\"{}\" text-anchor=\"middle\" font-family=\"system-ui, sans-serif\" font-size=\"11\" fill=\"#64748b\">{}</text>\n",
             height as f64 - bottom + 20.0,
-            format_offset(marker)
+            if has_real_points { marker.to_string() } else { format_offset(marker) }
         ));
     }
 
-    let row_count = report.unit_scores.len().max(1);
     for (index, score) in report.unit_scores.iter().enumerate() {
-        let x = scale(
-            score.solar_offset_minutes,
-            min_offset,
-            max_offset,
-            left,
-            left + plot_width,
-        );
-        let y = top + ((index + 1) as f64 * plot_height / (row_count + 1) as f64);
+        let point = &points[index];
+        let x = scale(point.x, min_x, max_x, left, left + plot_width);
+        let y = scale(point.y, min_y, max_y, top + plot_height, top);
         let radius = 10.0 + 14.0 * ((score.population as f64 / max_population).sqrt());
         let error = offset_map_error(score, view);
         let offset = offset_map_offset(score, view);
@@ -1720,6 +1730,32 @@ fn schematic_latitude(index: usize, count: usize) -> f64 {
     top - (index as f64 * (top - bottom) / (count - 1) as f64)
 }
 
+struct OffsetRenderPoint {
+    x: f64,
+    y: f64,
+}
+
+fn offset_map_points(report: &OffsetFitReport) -> Vec<OffsetRenderPoint> {
+    report
+        .unit_scores
+        .iter()
+        .enumerate()
+        .map(|(index, score)| {
+            if let Some(point) = &score.map_point {
+                OffsetRenderPoint {
+                    x: point.longitude,
+                    y: point.latitude,
+                }
+            } else {
+                OffsetRenderPoint {
+                    x: score.solar_offset_minutes,
+                    y: schematic_latitude(index, report.unit_scores.len()),
+                }
+            }
+        })
+        .collect()
+}
+
 fn offset_map_offset(score: &OffsetFitUnitScore, view: OffsetMapView) -> i32 {
     match view {
         OffsetMapView::CurrentStandard => score.current_standard_offset_minutes,
@@ -1740,10 +1776,11 @@ fn offset_map_error(score: &OffsetFitUnitScore, view: OffsetMapView) -> f64 {
     }
 }
 
-fn offset_axis_markers(min_offset: f64, max_offset: f64) -> Vec<i32> {
-    let start = ((min_offset / 60.0).ceil() as i32) * 60;
-    let end = ((max_offset / 60.0).floor() as i32) * 60;
-    (start..=end).step_by(60).collect()
+fn offset_axis_markers(min_value: f64, max_value: f64, longitude_axis: bool) -> Vec<i32> {
+    let step = if longitude_axis { 10 } else { 60 };
+    let start = ((min_value / step as f64).ceil() as i32) * step;
+    let end = ((max_value / step as f64).floor() as i32) * step;
+    (start..=end).step_by(step as usize).collect()
 }
 
 fn scale(value: f64, input_min: f64, input_max: f64, output_min: f64, output_max: f64) -> f64 {
@@ -2207,6 +2244,36 @@ pub fn seed_plan_input() -> ZonePlanInput {
         reference_assignment: vec![0, 0, 1, 1],
         caveats: vec!["Synthetic fixture for evaluator contract tests only.".to_string()],
     }
+}
+
+pub fn seed_plan_input_with_map_points() -> ZonePlanInput {
+    let mut input = seed_plan_input();
+    input.input_id = "zones-seed-plan-input-map-points".to_string();
+    input.units[0].map_point = Some(MapPoint {
+        latitude: 41.8781,
+        longitude: -87.6298,
+        source_id: Some("synthetic-map-points".to_string()),
+    });
+    input.units[1].map_point = Some(MapPoint {
+        latitude: 39.7684,
+        longitude: -86.1581,
+        source_id: Some("synthetic-map-points".to_string()),
+    });
+    input.units[2].map_point = Some(MapPoint {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        source_id: Some("synthetic-map-points".to_string()),
+    });
+    input.units[3].map_point = Some(MapPoint {
+        latitude: 39.9526,
+        longitude: -75.1652,
+        source_id: Some("synthetic-map-points".to_string()),
+    });
+    input.caveats.push(
+        "Synthetic map points validate coordinate-aware rendering only; not a county dataset."
+            .to_string(),
+    );
+    input
 }
 
 pub fn seed_source_manifest() -> SourceManifest {
@@ -2958,6 +3025,20 @@ mod tests {
     }
 
     #[test]
+    fn offset_fit_svg_uses_map_points_when_available() {
+        let report = evaluate_offset_fit(&seed_plan_input_with_map_points(), 60).unwrap();
+        let svg = render_offset_fit_svg(
+            &report,
+            OffsetMapView::CurrentStandard,
+            &OffsetMapRenderOptions::default(),
+        );
+
+        assert!(svg.contains("using plan map_point coordinates"));
+        assert!(svg.contains("longitude"));
+        assert!(svg.contains("west-a"));
+    }
+
+    #[test]
     fn offset_fit_geojson_renders_point_features() {
         let report = evaluate_offset_fit(&seed_plan_input(), 60).unwrap();
         let geojson = render_offset_fit_geojson(&report);
@@ -2971,14 +3052,7 @@ mod tests {
 
     #[test]
     fn offset_fit_geojson_uses_map_points_when_available() {
-        let mut input = seed_plan_input();
-        input.units[1].map_point = Some(MapPoint {
-            latitude: 41.8781,
-            longitude: -87.6298,
-            source_id: Some("test-point".to_string()),
-        });
-
-        let report = evaluate_offset_fit(&input, 60).unwrap();
+        let report = evaluate_offset_fit(&seed_plan_input_with_map_points(), 60).unwrap();
         let geojson = render_offset_fit_geojson(&report);
 
         assert!(geojson.contains("\"coordinates\":[-87.629800,41.878100]"));
@@ -3009,6 +3083,17 @@ mod tests {
             serde_json::from_str(include_str!("../../../data/plan-inputs/seed-plan.json")).unwrap();
 
         assert_eq!(input, seed_plan_input());
+        assert!(evaluate_zone_plan_input_with_manifest(&input, &seed_source_manifest()).is_ok());
+    }
+
+    #[test]
+    fn committed_map_point_plan_input_matches_seed_input() {
+        let input: ZonePlanInput = serde_json::from_str(include_str!(
+            "../../../data/plan-inputs/seed-plan-map-points.json"
+        ))
+        .unwrap();
+
+        assert_eq!(input, seed_plan_input_with_map_points());
         assert!(evaluate_zone_plan_input_with_manifest(&input, &seed_source_manifest()).is_ok());
     }
 

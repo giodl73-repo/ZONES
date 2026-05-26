@@ -94,6 +94,8 @@ page.
 point features for GIS inspection and later polygon joins.
 When plan units include `map_point` coordinates, GeoJSON uses those coordinates;
 otherwise it falls back to schematic points derived from solar offset.
+`data/plan-inputs/seed-plan-map-points.json` is the seed fixture for
+coordinate-aware map rendering.
 
 ## Non-goals
 

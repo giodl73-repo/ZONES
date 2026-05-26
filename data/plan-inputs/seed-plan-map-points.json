@@ -1,0 +1,103 @@
+{
+  "input_id": "zones-seed-plan-input-map-points",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "scenario": {
+    "scenario_id": "seed-current-law-baseline",
+    "kind": "current-law",
+    "label": "Seed current-law baseline",
+    "authority_source_id": "dot-49-cfr-71"
+  },
+  "units": [
+    {
+      "id": "west-a",
+      "name": "West A County",
+      "solar_offset_minutes": -360.0,
+      "population": 100,
+      "map_point": {
+        "latitude": 41.8781,
+        "longitude": -87.6298,
+        "source_id": "synthetic-map-points"
+      }
+    },
+    {
+      "id": "west-b",
+      "name": "West B County",
+      "solar_offset_minutes": -345.0,
+      "population": 80,
+      "map_point": {
+        "latitude": 39.7684,
+        "longitude": -86.1581,
+        "source_id": "synthetic-map-points"
+      }
+    },
+    {
+      "id": "east-a",
+      "name": "East A County",
+      "solar_offset_minutes": -300.0,
+      "population": 90,
+      "map_point": {
+        "latitude": 40.7128,
+        "longitude": -74.006,
+        "source_id": "synthetic-map-points"
+      }
+    },
+    {
+      "id": "east-b",
+      "name": "East B County",
+      "solar_offset_minutes": -285.0,
+      "population": 70,
+      "map_point": {
+        "latitude": 39.9526,
+        "longitude": -75.1652,
+        "source_id": "synthetic-map-points"
+      }
+    }
+  ],
+  "adjacency": [
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      1,
+      2
+    ]
+  ],
+  "plan": {
+    "name": "seed-two-zone-plan",
+    "zones": [
+      {
+        "id": "utc-minus-06-00",
+        "utc_offset_minutes": -360
+      },
+      {
+        "id": "utc-minus-05-00",
+        "utc_offset_minutes": -300
+      }
+    ],
+    "assignment": [
+      0,
+      0,
+      1,
+      1
+    ]
+  },
+  "reference_assignment": [
+    0,
+    0,
+    1,
+    1
+  ],
+  "caveats": [
+    "Synthetic fixture for evaluator contract tests only.",
+    "Synthetic map points validate coordinate-aware rendering only; not a county dataset."
+  ]
+}
