@@ -507,6 +507,17 @@ pub struct ZonePlan {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ZonePlanInput {
+    pub input_id: String,
+    pub source_manifest_id: String,
+    pub units: Vec<BoundaryUnit>,
+    pub adjacency: Vec<Vec<usize>>,
+    pub plan: ZonePlan,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZonePlanReport {
     pub plan_name: String,
     pub unit_count: usize,
@@ -536,6 +547,12 @@ pub enum ZonePlanError {
         unit_index: usize,
         zone_index: usize,
     },
+    #[error("edge from {from} to {to} is outside unit range 0..{unit_count}")]
+    EdgeOutOfBounds {
+        from: usize,
+        to: usize,
+        unit_count: usize,
+    },
     #[error("total population must be greater than zero")]
     EmptyPopulation,
     #[error("RPLAN context has no graph")]
@@ -557,6 +574,8 @@ pub enum ZonePlanError {
     BoundaryMetric(String),
     #[error("graph connectivity metric failed: {0}")]
     Connectivity(String),
+    #[error("empty id for {kind}")]
+    EmptyId { kind: &'static str },
 }
 
 pub fn evaluate_zone_plan(
@@ -601,6 +620,15 @@ pub fn evaluate_zone_plan(
         weighted_mean_absolute_error_minutes: weighted_error / total_population as f64,
         max_absolute_error_minutes: max_error,
     })
+}
+
+pub fn evaluate_zone_plan_input(input: &ZonePlanInput) -> Result<ZonePlanReport, ZonePlanError> {
+    validate_non_empty_plan("zone_plan_input.input_id", &input.input_id)?;
+    validate_non_empty_plan(
+        "zone_plan_input.source_manifest_id",
+        &input.source_manifest_id,
+    )?;
+    evaluate_zone_plan(&input.units, &input.adjacency, &input.plan)
 }
 
 pub fn evaluate_rplan_zone_context(
@@ -676,11 +704,30 @@ fn validate_inputs(
             });
         }
     }
+    for (from, edges) in adjacency.iter().enumerate() {
+        for &to in edges {
+            if to >= units.len() {
+                return Err(ZonePlanError::EdgeOutOfBounds {
+                    from,
+                    to,
+                    unit_count: units.len(),
+                });
+            }
+        }
+    }
     Ok(())
 }
 
 fn labels_in_use(assignment: &[usize]) -> BTreeSet<usize> {
     assignment.iter().copied().collect()
+}
+
+fn validate_non_empty_plan(kind: &'static str, value: &str) -> Result<(), ZonePlanError> {
+    if value.is_empty() {
+        Err(ZonePlanError::EmptyId { kind })
+    } else {
+        Ok(())
+    }
 }
 
 pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
@@ -726,6 +773,18 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
         assignment: vec![0, 0, 1, 1],
     };
     (units, adjacency, plan)
+}
+
+pub fn seed_plan_input() -> ZonePlanInput {
+    let (units, adjacency, plan) = seed_fixture();
+    ZonePlanInput {
+        input_id: "zones-seed-plan-input".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        units,
+        adjacency,
+        plan,
+        caveats: vec!["Synthetic fixture for evaluator contract tests only.".to_string()],
+    }
 }
 
 pub fn seed_source_manifest() -> SourceManifest {
@@ -811,6 +870,24 @@ mod tests {
     }
 
     #[test]
+    fn seed_plan_input_scores_through_file_contract() {
+        let report = evaluate_zone_plan_input(&seed_plan_input()).unwrap();
+
+        assert_eq!(report.plan_name, "seed-two-zone-plan");
+        assert_eq!(report.boundary_edges, 2);
+        assert!(report.all_zones_connected);
+    }
+
+    #[test]
+    fn committed_plan_input_matches_seed_input() {
+        let input: ZonePlanInput =
+            serde_json::from_str(include_str!("../../../data/plan-inputs/seed-plan.json")).unwrap();
+
+        assert_eq!(input, seed_plan_input());
+        assert!(evaluate_zone_plan_input(&input).is_ok());
+    }
+
+    #[test]
     fn disconnected_zone_is_reported() {
         let (units, adjacency, mut plan) = seed_fixture();
         plan.assignment = vec![0, 1, 1, 0];
@@ -830,6 +907,21 @@ mod tests {
             Err(ZonePlanError::UnknownZone {
                 unit_index: 0,
                 zone_index: 7
+            })
+        );
+    }
+
+    #[test]
+    fn out_of_bounds_adjacency_is_rejected() {
+        let (units, mut adjacency, plan) = seed_fixture();
+        adjacency[0].push(99);
+
+        assert_eq!(
+            evaluate_zone_plan(&units, &adjacency, &plan),
+            Err(ZonePlanError::EdgeOutOfBounds {
+                from: 0,
+                to: 99,
+                unit_count: 4,
             })
         );
     }

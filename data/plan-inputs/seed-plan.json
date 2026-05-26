@@ -1,0 +1,70 @@
+{
+  "input_id": "zones-seed-plan-input",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "units": [
+    {
+      "id": "west-a",
+      "name": "West A County",
+      "solar_offset_minutes": -360.0,
+      "population": 100
+    },
+    {
+      "id": "west-b",
+      "name": "West B County",
+      "solar_offset_minutes": -345.0,
+      "population": 80
+    },
+    {
+      "id": "east-a",
+      "name": "East A County",
+      "solar_offset_minutes": -300.0,
+      "population": 90
+    },
+    {
+      "id": "east-b",
+      "name": "East B County",
+      "solar_offset_minutes": -285.0,
+      "population": 70
+    }
+  ],
+  "adjacency": [
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      1,
+      2
+    ]
+  ],
+  "plan": {
+    "name": "seed-two-zone-plan",
+    "zones": [
+      {
+        "id": "western",
+        "utc_offset_minutes": -360
+      },
+      {
+        "id": "eastern",
+        "utc_offset_minutes": -300
+      }
+    ],
+    "assignment": [
+      0,
+      0,
+      1,
+      1
+    ]
+  },
+  "caveats": [
+    "Synthetic fixture for evaluator contract tests only."
+  ]
+}

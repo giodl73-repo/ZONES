@@ -91,6 +91,15 @@ Every evaluated plan must report at least:
 - population-weighted mean absolute solar-time error,
 - maximum absolute solar-time error.
 
+The portable JSON plan-input contract contains:
+
+- `input_id`;
+- `source_manifest_id`;
+- `units`, each with id, name, solar offset, and population;
+- `adjacency`, as zero-based unit-index neighbors;
+- `plan`, with zone specs and one assignment index per unit;
+- `caveats`, for fixture/source limitations.
+
 Foundation scoring uses minutes as the unit. A unit's **standard solar error**
 is:
 
@@ -171,6 +180,8 @@ Foundation validation:
 cargo fmt
 cargo test --workspace
 cargo run -p zones-cli -- seed-report
+cargo run -p zones-cli -- evaluate-plan
+cargo run -p zones-cli -- source-report
 git diff --check
 ```
 

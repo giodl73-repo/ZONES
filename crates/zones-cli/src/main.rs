@@ -1,7 +1,10 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::{fs, path::PathBuf};
-use zones_core::{evaluate_zone_plan, seed_fixture, seed_source_manifest, SourceManifest};
+use zones_core::{
+    evaluate_zone_plan, evaluate_zone_plan_input, seed_fixture, seed_plan_input,
+    seed_source_manifest, SourceManifest, ZonePlanInput,
+};
 
 #[derive(Debug, Parser)]
 #[command(name = "zones")]
@@ -15,6 +18,11 @@ struct Cli {
 enum Command {
     Status,
     SeedReport,
+    SeedPlanInput,
+    EvaluatePlan {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+    },
     SeedSources,
     SourceReport {
         #[arg(default_value = "data/source-manifests/us-foundation.json")]
@@ -31,6 +39,18 @@ fn main() -> Result<()> {
         Command::SeedReport => {
             let (units, adjacency, plan) = seed_fixture();
             let report = evaluate_zone_plan(&units, &adjacency, &plan)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedPlanInput => {
+            let input = seed_plan_input();
+            println!("{}", serde_json::to_string_pretty(&input)?);
+        }
+        Command::EvaluatePlan { path } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = evaluate_zone_plan_input(&input)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::SeedSources => {
