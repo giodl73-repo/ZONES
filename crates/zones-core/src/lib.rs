@@ -588,6 +588,11 @@ pub enum ZonePlanError {
     },
     #[error("plan must define at least one zone")]
     EmptyZones,
+    #[error("zone {zone_id} has unsupported UTC offset {utc_offset_minutes}")]
+    InvalidZoneUtcOffset {
+        zone_id: String,
+        utc_offset_minutes: i32,
+    },
     #[error("unit {unit_index} is assigned to missing zone index {zone_index}")]
     UnknownZone {
         unit_index: usize,
@@ -885,6 +890,14 @@ fn validate_inputs(
 ) -> Result<(), ZonePlanError> {
     if plan.zones.is_empty() {
         return Err(ZonePlanError::EmptyZones);
+    }
+    for zone in &plan.zones {
+        if !(-14 * 60..=14 * 60).contains(&zone.utc_offset_minutes) {
+            return Err(ZonePlanError::InvalidZoneUtcOffset {
+                zone_id: zone.id.clone(),
+                utc_offset_minutes: zone.utc_offset_minutes,
+            });
+        }
     }
     if units.len() != plan.assignment.len() {
         return Err(ZonePlanError::UnitAssignmentMismatch {
@@ -1241,6 +1254,68 @@ mod tests {
             Err(ZonePlanError::UnknownZone {
                 unit_index: 0,
                 zone_index: 7
+            })
+        );
+    }
+
+    #[test]
+    fn half_hour_offsets_are_supported() {
+        let units = vec![BoundaryUnit {
+            id: "half-hour-a".to_string(),
+            name: "Half Hour Pilot".to_string(),
+            solar_offset_minutes: 330.0,
+            population: 100,
+        }];
+        let adjacency = vec![vec![]];
+        let plan = ZonePlan {
+            name: "half-hour-zone-plan".to_string(),
+            zones: vec![ZoneSpec {
+                id: "utc-plus-05-30".to_string(),
+                utc_offset_minutes: 330,
+            }],
+            assignment: vec![0],
+        };
+
+        let report = evaluate_zone_plan(&units, &adjacency, &plan).unwrap();
+
+        assert_eq!(report.weighted_mean_absolute_error_minutes, 0.0);
+        assert_eq!(report.max_absolute_error_minutes, 0.0);
+    }
+
+    #[test]
+    fn quarter_hour_offsets_are_supported() {
+        let units = vec![BoundaryUnit {
+            id: "quarter-hour-a".to_string(),
+            name: "Quarter Hour Pilot".to_string(),
+            solar_offset_minutes: 345.0,
+            population: 100,
+        }];
+        let adjacency = vec![vec![]];
+        let plan = ZonePlan {
+            name: "quarter-hour-zone-plan".to_string(),
+            zones: vec![ZoneSpec {
+                id: "utc-plus-05-45".to_string(),
+                utc_offset_minutes: 345,
+            }],
+            assignment: vec![0],
+        };
+
+        let report = evaluate_zone_plan(&units, &adjacency, &plan).unwrap();
+
+        assert_eq!(report.weighted_mean_absolute_error_minutes, 0.0);
+        assert_eq!(report.max_absolute_error_minutes, 0.0);
+    }
+
+    #[test]
+    fn implausible_zone_offsets_are_rejected() {
+        let (units, adjacency, mut plan) = seed_fixture();
+        plan.zones[0].utc_offset_minutes = 15 * 60;
+
+        assert_eq!(
+            evaluate_zone_plan(&units, &adjacency, &plan),
+            Err(ZonePlanError::InvalidZoneUtcOffset {
+                zone_id: "western".to_string(),
+                utc_offset_minutes: 900,
             })
         );
     }

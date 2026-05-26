@@ -123,12 +123,13 @@ abs(unit_solar_offset_minutes - zone_standard_offset_minutes)
 
 where `unit_solar_offset_minutes` is the longitude-derived local mean solar
 offset from UTC and `zone_standard_offset_minutes` is the standard offset active
-for the named regime. A daylight-saving scenario uses the offset rule active on
-the evaluation date before computing daylight-shifted error. In the US this is
-often `standard offset + 60` during the DST period; globally this must not be
-hardcoded because daylight-saving deltas and transition rules vary. Later specs
-may add seasonal sunrise/sunset exposure metrics, but those must be named
-separately from standard solar error.
+for the named regime. Offsets are minute-precise, not whole-hour-only:
+half-hour and 45-minute civil offsets must be valid. A daylight-saving scenario
+uses the offset rule active on the evaluation date before computing
+daylight-shifted error. In the US this is often `standard offset + 60` during
+the DST period; globally this must not be hardcoded because daylight-saving
+deltas and transition rules vary. Later specs may add seasonal sunrise/sunset
+exposure metrics, but those must be named separately from standard solar error.
 
 Later reports may add:
 

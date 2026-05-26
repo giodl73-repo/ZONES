@@ -13,6 +13,7 @@ assumptions, and scoring choices.
 | `us-boundary-sources.md` | draft | boundary-data-steward | Inventory Census/TIGER county boundaries, GEOID/FIPS handling, population sources, and BISECT/RPLAN reuse points. |
 | `legal-time-zone-boundaries.md` | draft | boundary-data-steward | Inventory current legal time-zone boundary geospatial sources and quality limits. |
 | `global-timezone-sources.md` | draft | boundary-data-steward | Inventory IANA tzdb, CLDR, national legal sources, and historical time-zone data limits. |
+| `time-offset-rules.md` | draft | solar-time-methodologist | Confirm minute-precision offsets, including half-hour and quarter-hour civil time. |
 | `fairness-principles.md` | draft | full parliament | Define how solar fit, disruption, state/county respect, contiguity, and feasibility trade off. |
 
 ## Source Rules
