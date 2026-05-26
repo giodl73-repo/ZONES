@@ -104,6 +104,9 @@ The portable JSON plan-input contract contains:
 This is intentionally shallow at the foundation layer: later county baselines
 must add per-field source references, but even the seed path should reject a
 plan file whose manifest identity does not match the supplied manifest.
+`evaluate-plan-detail` emits the same aggregate report plus per-unit error rows,
+input caveats, and source caveats so county baselines can publish both summary
+and inspection artifacts from the same input.
 
 Foundation scoring uses minutes as the unit. A unit's **standard solar error**
 is:
@@ -186,6 +189,7 @@ cargo fmt
 cargo test --workspace
 cargo run -p zones-cli -- seed-report
 cargo run -p zones-cli -- evaluate-plan
+cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- source-report
 git diff --check
 ```

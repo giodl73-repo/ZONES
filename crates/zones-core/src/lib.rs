@@ -528,6 +528,30 @@ pub struct ZonePlanReport {
     pub max_absolute_error_minutes: f64,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ZoneUnitScore {
+    pub unit_id: String,
+    pub unit_name: String,
+    pub zone_id: String,
+    pub population: u64,
+    pub solar_offset_minutes: f64,
+    pub zone_utc_offset_minutes: i32,
+    pub absolute_error_minutes: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ZonePlanEvaluation {
+    pub input_id: String,
+    pub source_manifest_id: String,
+    pub source_manifest_generated_on: String,
+    pub plan_report: ZonePlanReport,
+    pub unit_scores: Vec<ZoneUnitScore>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input_caveats: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_caveats: Vec<String>,
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ZonePlanError {
     #[error("unit count {unit_count} does not match plan assignment count {assignment_count}")]
@@ -644,6 +668,43 @@ pub fn evaluate_zone_plan_input_with_manifest(
     input: &ZonePlanInput,
     manifest: &SourceManifest,
 ) -> Result<ZonePlanReport, ZonePlanError> {
+    validate_input_manifest_pair(input, manifest)?;
+    evaluate_zone_plan_input(input)
+}
+
+pub fn evaluate_zone_plan_evaluation(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+) -> Result<ZonePlanEvaluation, ZonePlanError> {
+    validate_input_manifest_pair(input, manifest)?;
+    let plan_report = evaluate_zone_plan_input(input)?;
+    let unit_scores = score_units(&input.units, &input.plan);
+    let source_caveats = manifest
+        .sources
+        .iter()
+        .flat_map(|source| {
+            source
+                .caveats
+                .iter()
+                .map(|caveat| format!("{}: {}", source.source_id, caveat))
+        })
+        .collect();
+
+    Ok(ZonePlanEvaluation {
+        input_id: input.input_id.clone(),
+        source_manifest_id: input.source_manifest_id.clone(),
+        source_manifest_generated_on: manifest.generated_on.clone(),
+        plan_report,
+        unit_scores,
+        input_caveats: input.caveats.clone(),
+        source_caveats,
+    })
+}
+
+fn validate_input_manifest_pair(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+) -> Result<(), ZonePlanError> {
     manifest
         .validate()
         .map_err(|err| ZonePlanError::SourceManifest(err.to_string()))?;
@@ -653,7 +714,28 @@ pub fn evaluate_zone_plan_input_with_manifest(
             manifest_id: manifest.manifest_id.clone(),
         });
     }
-    evaluate_zone_plan_input(input)
+    Ok(())
+}
+
+fn score_units(units: &[BoundaryUnit], plan: &ZonePlan) -> Vec<ZoneUnitScore> {
+    units
+        .iter()
+        .enumerate()
+        .map(|(unit_index, unit)| {
+            let zone = &plan.zones[plan.assignment[unit_index]];
+            ZoneUnitScore {
+                unit_id: unit.id.clone(),
+                unit_name: unit.name.clone(),
+                zone_id: zone.id.clone(),
+                population: unit.population,
+                solar_offset_minutes: unit.solar_offset_minutes,
+                zone_utc_offset_minutes: zone.utc_offset_minutes,
+                absolute_error_minutes: (unit.solar_offset_minutes
+                    - zone.utc_offset_minutes as f64)
+                    .abs(),
+            }
+        })
+        .collect()
 }
 
 pub fn evaluate_rplan_zone_context(
@@ -911,6 +993,21 @@ mod tests {
 
         assert_eq!(report.plan_name, "seed-two-zone-plan");
         assert_eq!(report.unit_count, 4);
+    }
+
+    #[test]
+    fn seed_plan_evaluation_carries_unit_scores_and_caveats() {
+        let evaluation =
+            evaluate_zone_plan_evaluation(&seed_plan_input(), &seed_source_manifest()).unwrap();
+
+        assert_eq!(evaluation.input_id, "zones-seed-plan-input");
+        assert_eq!(evaluation.source_manifest_id, "zones-us-foundation-sources");
+        assert_eq!(evaluation.unit_scores.len(), 4);
+        assert_eq!(evaluation.unit_scores[1].unit_id, "west-b");
+        assert_eq!(evaluation.unit_scores[1].zone_id, "western");
+        assert_eq!(evaluation.unit_scores[1].absolute_error_minutes, 15.0);
+        assert_eq!(evaluation.input_caveats.len(), 1);
+        assert_eq!(evaluation.source_caveats.len(), 5);
     }
 
     #[test]
