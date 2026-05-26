@@ -1016,6 +1016,14 @@ pub struct MapPoint {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "coordinates")]
+pub enum MapGeometry {
+    Point([f64; 2]),
+    Polygon(Vec<Vec<[f64; 2]>>),
+    MultiPolygon(Vec<Vec<Vec<[f64; 2]>>>),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoundaryUnit {
     pub id: String,
     pub name: String,
@@ -1023,6 +1031,8 @@ pub struct BoundaryUnit {
     pub population: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub map_point: Option<MapPoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub map_geometry: Option<MapGeometry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1134,6 +1144,8 @@ pub struct OffsetFitUnitScore {
     pub solar_offset_minutes: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub map_point: Option<MapPoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub map_geometry: Option<MapGeometry>,
     pub current_zone_id: String,
     pub current_standard_offset_minutes: i32,
     pub current_standard_error_minutes: f64,
@@ -1486,6 +1498,7 @@ pub fn evaluate_offset_fit(
             population: unit.population,
             solar_offset_minutes: unit.solar_offset_minutes,
             map_point: unit.map_point.clone(),
+            map_geometry: unit.map_geometry.clone(),
             current_zone_id: current_zone.id.clone(),
             current_standard_offset_minutes: current_zone.utc_offset_minutes,
             current_standard_error_minutes: current_standard_error,
@@ -1534,22 +1547,22 @@ pub fn render_offset_fit_svg(
     let plot_width = width as f64 - left - right;
     let plot_height = height as f64 - top - bottom;
     let points = offset_map_points(report);
-    let has_real_points = report
+    let has_real_placement = report
         .unit_scores
         .iter()
-        .any(|score| score.map_point.is_some());
+        .any(|score| score.map_geometry.is_some() || score.map_point.is_some());
     let min_x = points
         .iter()
         .map(|point| point.x)
         .fold(f64::INFINITY, f64::min)
         .floor()
-        - if has_real_points { 2.0 } else { 30.0 };
+        - if has_real_placement { 2.0 } else { 30.0 };
     let max_x = points
         .iter()
         .map(|point| point.x)
         .fold(f64::NEG_INFINITY, f64::max)
         .ceil()
-        + if has_real_points { 2.0 } else { 30.0 };
+        + if has_real_placement { 2.0 } else { 30.0 };
     let min_y = points
         .iter()
         .map(|point| point.y)
@@ -1589,8 +1602,8 @@ pub fn render_offset_fit_svg(
         "<text x=\"32\" y=\"42\" font-family=\"system-ui, sans-serif\" font-size=\"24\" font-weight=\"700\" fill=\"#111827\">{}</text>\n",
         escape_xml(view.title())
     ));
-    let geometry_note = if has_real_points {
-        "using plan map_point coordinates where available"
+    let geometry_note = if has_real_placement {
+        "using plan geometry or map_point coordinates where available"
     } else {
         "schematic until geometry-backed boundaries are available"
     };
@@ -1609,10 +1622,10 @@ pub fn render_offset_fit_svg(
         "<text x=\"{}\" y=\"{}\" font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#475569\">{}</text>\n",
         left,
         height as f64 - 28.0,
-        if has_real_points { "longitude" } else { "solar offset minutes from UTC" }
+        if has_real_placement { "longitude" } else { "solar offset minutes from UTC" }
     ));
 
-    for marker in offset_axis_markers(min_x, max_x, has_real_points) {
+    for marker in offset_axis_markers(min_x, max_x, has_real_placement) {
         let x = scale(marker as f64, min_x, max_x, left, left + plot_width);
         svg.push_str(&format!(
             "<line x1=\"{x:.2}\" y1=\"{top}\" x2=\"{x:.2}\" y2=\"{}\" stroke=\"#e2e8f0\" stroke-width=\"1\"/>\n",
@@ -1621,7 +1634,7 @@ pub fn render_offset_fit_svg(
         svg.push_str(&format!(
             "<text x=\"{x:.2}\" y=\"{}\" text-anchor=\"middle\" font-family=\"system-ui, sans-serif\" font-size=\"11\" fill=\"#64748b\">{}</text>\n",
             height as f64 - bottom + 20.0,
-            if has_real_points { marker.to_string() } else { format_offset(marker) }
+            if has_real_placement { marker.to_string() } else { format_offset(marker) }
         ));
     }
 
@@ -1681,24 +1694,29 @@ pub fn render_offset_fit_geojson(report: &OffsetFitReport) -> String {
         if index > 0 {
             geojson.push_str(",\n");
         }
-        let (longitude, latitude, geometry_note) = if let Some(point) = &score.map_point {
+        let (geometry, geometry_note) = if let Some(geometry) = &score.map_geometry {
             (
-                point.longitude,
-                point.latitude,
+                map_geometry_to_geojson(geometry),
+                "geometry from plan input",
+            )
+        } else if let Some(point) = &score.map_point {
+            (
+                point_geometry_to_geojson(point.longitude, point.latitude),
                 "representative point from plan input",
             )
         } else {
             (
-                score.solar_offset_minutes / 4.0,
-                schematic_latitude(index, report.unit_scores.len()),
+                point_geometry_to_geojson(
+                    score.solar_offset_minutes / 4.0,
+                    schematic_latitude(index, report.unit_scores.len()),
+                ),
                 "schematic point; longitude inferred from solar offset",
             )
         };
         geojson.push_str(&format!(
-            "{{\"type\":\"Feature\",\"id\":\"{}\",\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{:.6},{:.6}]}},\"properties\":{{\"unit_id\":\"{}\",\"unit_name\":\"{}\",\"population\":{},\"solar_offset_minutes\":{},\"current_zone_id\":\"{}\",\"current_standard_offset_minutes\":{},\"current_standard_error_minutes\":{},\"current_dst_offset_minutes\":{},\"current_dst_error_minutes\":{},\"best_whole_hour_offset_minutes\":{},\"best_whole_hour_error_minutes\":{},\"best_half_hour_offset_minutes\":{},\"best_half_hour_error_minutes\":{},\"best_quarter_hour_offset_minutes\":{},\"best_quarter_hour_error_minutes\":{},\"geometry_note\":\"{}\"}}}}",
+            "{{\"type\":\"Feature\",\"id\":\"{}\",\"geometry\":{},\"properties\":{{\"unit_id\":\"{}\",\"unit_name\":\"{}\",\"population\":{},\"solar_offset_minutes\":{},\"current_zone_id\":\"{}\",\"current_standard_offset_minutes\":{},\"current_standard_error_minutes\":{},\"current_dst_offset_minutes\":{},\"current_dst_error_minutes\":{},\"best_whole_hour_offset_minutes\":{},\"best_whole_hour_error_minutes\":{},\"best_half_hour_offset_minutes\":{},\"best_half_hour_error_minutes\":{},\"best_quarter_hour_offset_minutes\":{},\"best_quarter_hour_error_minutes\":{},\"geometry_note\":\"{}\"}}}}",
             escape_json(&score.unit_id),
-            longitude,
-            latitude,
+            geometry,
             escape_json(&score.unit_id),
             escape_json(&score.unit_name),
             score.population,
@@ -1741,7 +1759,13 @@ fn offset_map_points(report: &OffsetFitReport) -> Vec<OffsetRenderPoint> {
         .iter()
         .enumerate()
         .map(|(index, score)| {
-            if let Some(point) = &score.map_point {
+            if let Some(geometry) = &score.map_geometry {
+                let (x, y) = map_geometry_centroid(geometry).unwrap_or((
+                    score.solar_offset_minutes / 4.0,
+                    schematic_latitude(index, report.unit_scores.len()),
+                ));
+                OffsetRenderPoint { x, y }
+            } else if let Some(point) = &score.map_point {
                 OffsetRenderPoint {
                     x: point.longitude,
                     y: point.latitude,
@@ -1754,6 +1778,73 @@ fn offset_map_points(report: &OffsetFitReport) -> Vec<OffsetRenderPoint> {
             }
         })
         .collect()
+}
+
+fn point_geometry_to_geojson(longitude: f64, latitude: f64) -> String {
+    format!("{{\"type\":\"Point\",\"coordinates\":[{longitude:.6},{latitude:.6}]}}")
+}
+
+fn map_geometry_to_geojson(geometry: &MapGeometry) -> String {
+    match geometry {
+        MapGeometry::Point(point) => point_geometry_to_geojson(point[0], point[1]),
+        MapGeometry::Polygon(rings) => {
+            format!(
+                "{{\"type\":\"Polygon\",\"coordinates\":{}}}",
+                coordinate_rings_to_json(rings)
+            )
+        }
+        MapGeometry::MultiPolygon(polygons) => {
+            let polygon_json = polygons
+                .iter()
+                .map(|polygon| coordinate_rings_to_json(polygon))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("{{\"type\":\"MultiPolygon\",\"coordinates\":[{polygon_json}]}}")
+        }
+    }
+}
+
+fn coordinate_rings_to_json(rings: &[Vec<[f64; 2]>]) -> String {
+    let ring_json = rings
+        .iter()
+        .map(|ring| {
+            let points = ring
+                .iter()
+                .map(|point| format!("[{:.6},{:.6}]", point[0], point[1]))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("[{points}]")
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("[{ring_json}]")
+}
+
+fn map_geometry_centroid(geometry: &MapGeometry) -> Option<(f64, f64)> {
+    let mut longitude_sum = 0.0;
+    let mut latitude_sum = 0.0;
+    let mut count = 0.0;
+    for point in map_geometry_points(geometry) {
+        longitude_sum += point[0];
+        latitude_sum += point[1];
+        count += 1.0;
+    }
+    if count == 0.0 {
+        None
+    } else {
+        Some((longitude_sum / count, latitude_sum / count))
+    }
+}
+
+fn map_geometry_points(geometry: &MapGeometry) -> Vec<[f64; 2]> {
+    match geometry {
+        MapGeometry::Point(point) => vec![*point],
+        MapGeometry::Polygon(rings) => rings.iter().flatten().copied().collect(),
+        MapGeometry::MultiPolygon(polygons) => polygons
+            .iter()
+            .flat_map(|polygon| polygon.iter().flatten().copied())
+            .collect(),
+    }
 }
 
 fn offset_map_offset(score: &OffsetFitUnitScore, view: OffsetMapView) -> i32 {
@@ -2035,6 +2126,7 @@ pub fn evaluate_rplan_zone_context(
             solar_offset_minutes: solar_offset_minutes[unit_index],
             population: population as u64,
             map_point: None,
+            map_geometry: None,
         });
     }
     let adjacency = graph
@@ -2080,6 +2172,24 @@ fn validate_inputs(
                     unit_id: unit.id.clone(),
                     longitude: point.longitude.to_string(),
                 });
+            }
+        }
+        if let Some(geometry) = &unit.map_geometry {
+            for point in map_geometry_points(geometry) {
+                let longitude = point[0];
+                let latitude = point[1];
+                if !latitude.is_finite() || latitude < -90.0 || latitude > 90.0 {
+                    return Err(ZonePlanError::InvalidMapLatitude {
+                        unit_id: unit.id.clone(),
+                        latitude: latitude.to_string(),
+                    });
+                }
+                if !longitude.is_finite() || longitude < -180.0 || longitude > 180.0 {
+                    return Err(ZonePlanError::InvalidMapLongitude {
+                        unit_id: unit.id.clone(),
+                        longitude: longitude.to_string(),
+                    });
+                }
             }
         }
     }
@@ -2186,6 +2296,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             solar_offset_minutes: -360.0,
             population: 100,
             map_point: None,
+            map_geometry: None,
         },
         BoundaryUnit {
             id: "west-b".to_string(),
@@ -2193,6 +2304,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             solar_offset_minutes: -345.0,
             population: 80,
             map_point: None,
+            map_geometry: None,
         },
         BoundaryUnit {
             id: "east-a".to_string(),
@@ -2200,6 +2312,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             solar_offset_minutes: -300.0,
             population: 90,
             map_point: None,
+            map_geometry: None,
         },
         BoundaryUnit {
             id: "east-b".to_string(),
@@ -2207,6 +2320,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             solar_offset_minutes: -285.0,
             population: 70,
             map_point: None,
+            map_geometry: None,
         },
     ];
     let adjacency = vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]];
@@ -2254,26 +2368,40 @@ pub fn seed_plan_input_with_map_points() -> ZonePlanInput {
         longitude: -87.6298,
         source_id: Some("synthetic-map-points".to_string()),
     });
+    input.units[0].map_geometry = Some(seed_square_geometry(-88.1, 41.4, -87.1, 42.2));
     input.units[1].map_point = Some(MapPoint {
         latitude: 39.7684,
         longitude: -86.1581,
         source_id: Some("synthetic-map-points".to_string()),
     });
+    input.units[1].map_geometry = Some(seed_square_geometry(-86.7, 39.3, -85.7, 40.2));
     input.units[2].map_point = Some(MapPoint {
         latitude: 40.7128,
         longitude: -74.0060,
         source_id: Some("synthetic-map-points".to_string()),
     });
+    input.units[2].map_geometry = Some(seed_square_geometry(-74.5, 40.3, -73.5, 41.1));
     input.units[3].map_point = Some(MapPoint {
         latitude: 39.9526,
         longitude: -75.1652,
         source_id: Some("synthetic-map-points".to_string()),
     });
+    input.units[3].map_geometry = Some(seed_square_geometry(-75.7, 39.5, -74.7, 40.4));
     input.caveats.push(
         "Synthetic map points validate coordinate-aware rendering only; not a county dataset."
             .to_string(),
     );
     input
+}
+
+fn seed_square_geometry(west: f64, south: f64, east: f64, north: f64) -> MapGeometry {
+    MapGeometry::Polygon(vec![vec![
+        [west, south],
+        [east, south],
+        [east, north],
+        [west, north],
+        [west, south],
+    ]])
 }
 
 pub fn seed_source_manifest() -> SourceManifest {
@@ -3025,7 +3153,7 @@ mod tests {
     }
 
     #[test]
-    fn offset_fit_svg_uses_map_points_when_available() {
+    fn offset_fit_svg_uses_geometry_when_available() {
         let report = evaluate_offset_fit(&seed_plan_input_with_map_points(), 60).unwrap();
         let svg = render_offset_fit_svg(
             &report,
@@ -3033,7 +3161,7 @@ mod tests {
             &OffsetMapRenderOptions::default(),
         );
 
-        assert!(svg.contains("using plan map_point coordinates"));
+        assert!(svg.contains("using plan geometry or map_point coordinates"));
         assert!(svg.contains("longitude"));
         assert!(svg.contains("west-a"));
     }
@@ -3051,12 +3179,13 @@ mod tests {
     }
 
     #[test]
-    fn offset_fit_geojson_uses_map_points_when_available() {
+    fn offset_fit_geojson_uses_geometry_when_available() {
         let report = evaluate_offset_fit(&seed_plan_input_with_map_points(), 60).unwrap();
         let geojson = render_offset_fit_geojson(&report);
 
-        assert!(geojson.contains("\"coordinates\":[-87.629800,41.878100]"));
-        assert!(geojson.contains("representative point from plan input"));
+        assert!(geojson.contains("\"type\":\"Polygon\""));
+        assert!(geojson.contains("geometry from plan input"));
+        assert!(geojson.contains("[-88.100000,41.400000]"));
     }
 
     #[test]
@@ -3129,6 +3258,7 @@ mod tests {
             solar_offset_minutes: 330.0,
             population: 100,
             map_point: None,
+            map_geometry: None,
         }];
         let adjacency = vec![vec![]];
         let plan = ZonePlan {
@@ -3154,6 +3284,7 @@ mod tests {
             solar_offset_minutes: 345.0,
             population: 100,
             map_point: None,
+            map_geometry: None,
         }];
         let adjacency = vec![vec![]];
         let plan = ZonePlan {

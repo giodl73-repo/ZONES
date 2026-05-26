@@ -90,10 +90,12 @@ current standard time, current DST-period clock time, and best whole-hour,
 half-hour, and quarter-hour options.
 `write-offset-atlas` writes those maps plus a local `index.html` comparison
 page.
-`write-offset-geojson` exports the same offset-fit fields as schematic GeoJSON
-point features for GIS inspection and later polygon joins.
-When plan units include `map_point` coordinates, GeoJSON uses those coordinates;
-otherwise it falls back to schematic points derived from solar offset.
+`write-offset-geojson` exports the same offset-fit fields as GeoJSON for GIS
+inspection and later boundary joins.
+When plan units include `map_geometry` polygons or multipolygons, GeoJSON emits
+those shapes. If only `map_point` coordinates are present, it emits
+representative points; otherwise it falls back to schematic points derived from
+solar offset.
 `data/plan-inputs/seed-plan-map-points.json` is the seed fixture for
 coordinate-aware map rendering.
 

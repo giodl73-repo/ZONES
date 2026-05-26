@@ -17,6 +17,33 @@
         "latitude": 41.8781,
         "longitude": -87.6298,
         "source_id": "synthetic-map-points"
+      },
+      "map_geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -88.1,
+              41.4
+            ],
+            [
+              -87.1,
+              41.4
+            ],
+            [
+              -87.1,
+              42.2
+            ],
+            [
+              -88.1,
+              42.2
+            ],
+            [
+              -88.1,
+              41.4
+            ]
+          ]
+        ]
       }
     },
     {
@@ -28,6 +55,33 @@
         "latitude": 39.7684,
         "longitude": -86.1581,
         "source_id": "synthetic-map-points"
+      },
+      "map_geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -86.7,
+              39.3
+            ],
+            [
+              -85.7,
+              39.3
+            ],
+            [
+              -85.7,
+              40.2
+            ],
+            [
+              -86.7,
+              40.2
+            ],
+            [
+              -86.7,
+              39.3
+            ]
+          ]
+        ]
       }
     },
     {
@@ -39,6 +93,33 @@
         "latitude": 40.7128,
         "longitude": -74.006,
         "source_id": "synthetic-map-points"
+      },
+      "map_geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -74.5,
+              40.3
+            ],
+            [
+              -73.5,
+              40.3
+            ],
+            [
+              -73.5,
+              41.1
+            ],
+            [
+              -74.5,
+              41.1
+            ],
+            [
+              -74.5,
+              40.3
+            ]
+          ]
+        ]
       }
     },
     {
@@ -50,6 +131,33 @@
         "latitude": 39.9526,
         "longitude": -75.1652,
         "source_id": "synthetic-map-points"
+      },
+      "map_geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -75.7,
+              39.5
+            ],
+            [
+              -74.7,
+              39.5
+            ],
+            [
+              -74.7,
+              40.4
+            ],
+            [
+              -75.7,
+              40.4
+            ],
+            [
+              -75.7,
+              39.5
+            ]
+          ]
+        ]
       }
     }
   ],
