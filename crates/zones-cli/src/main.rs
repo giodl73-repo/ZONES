@@ -71,6 +71,14 @@ enum Command {
         #[arg(long, default_value = "target/zones/offset-atlas")]
         output_dir: PathBuf,
     },
+    WriteOffsetGeojson {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        dst_delta_minutes: i32,
+        #[arg(long, default_value = "target/zones/seed-offset-fit.geojson")]
+        output: PathBuf,
+    },
     WriteEvaluation {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
@@ -232,6 +240,25 @@ fn main() -> Result<()> {
             fs::write(&index_path, render_offset_atlas_html(&report, &map_files))
                 .with_context(|| format!("failed to write {}", index_path.display()))?;
             println!("{}", index_path.display());
+        }
+        Command::WriteOffsetGeojson {
+            path,
+            dst_delta_minutes,
+            output,
+        } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = evaluate_offset_fit(&input, dst_delta_minutes)?;
+            if let Some(parent) = output.parent() {
+                fs::create_dir_all(parent).with_context(|| {
+                    format!("failed to create output directory {}", parent.display())
+                })?;
+            }
+            fs::write(&output, zones_core::render_offset_fit_geojson(&report))
+                .with_context(|| format!("failed to write {}", output.display()))?;
+            println!("{}", output.display());
         }
         Command::WriteEvaluation {
             path,

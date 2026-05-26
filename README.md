@@ -90,6 +90,8 @@ current standard time, current DST-period clock time, and best whole-hour,
 half-hour, and quarter-hour options.
 `write-offset-atlas` writes those maps plus a local `index.html` comparison
 page.
+`write-offset-geojson` exports the same offset-fit fields as schematic GeoJSON
+point features for GIS inspection and later polygon joins.
 
 ## Non-goals
 

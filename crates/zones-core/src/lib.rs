@@ -1646,6 +1646,51 @@ pub fn render_offset_fit_svg(
     svg
 }
 
+pub fn render_offset_fit_geojson(report: &OffsetFitReport) -> String {
+    let mut geojson = String::new();
+    geojson
+        .push_str("{\"type\":\"FeatureCollection\",\"name\":\"zones_offset_fit\",\"features\":[\n");
+    for (index, score) in report.unit_scores.iter().enumerate() {
+        if index > 0 {
+            geojson.push_str(",\n");
+        }
+        let longitude = score.solar_offset_minutes / 4.0;
+        let latitude = schematic_latitude(index, report.unit_scores.len());
+        geojson.push_str(&format!(
+            "{{\"type\":\"Feature\",\"id\":\"{}\",\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{:.6},{:.6}]}},\"properties\":{{\"unit_id\":\"{}\",\"unit_name\":\"{}\",\"population\":{},\"solar_offset_minutes\":{},\"current_zone_id\":\"{}\",\"current_standard_offset_minutes\":{},\"current_standard_error_minutes\":{},\"current_dst_offset_minutes\":{},\"current_dst_error_minutes\":{},\"best_whole_hour_offset_minutes\":{},\"best_whole_hour_error_minutes\":{},\"best_half_hour_offset_minutes\":{},\"best_half_hour_error_minutes\":{},\"best_quarter_hour_offset_minutes\":{},\"best_quarter_hour_error_minutes\":{},\"geometry_note\":\"schematic point; longitude inferred from solar offset\"}}}}",
+            escape_json(&score.unit_id),
+            longitude,
+            latitude,
+            escape_json(&score.unit_id),
+            escape_json(&score.unit_name),
+            score.population,
+            score.solar_offset_minutes,
+            escape_json(&score.current_zone_id),
+            score.current_standard_offset_minutes,
+            score.current_standard_error_minutes,
+            score.current_dst_offset_minutes,
+            score.current_dst_error_minutes,
+            score.best_whole_hour_offset_minutes,
+            score.best_whole_hour_error_minutes,
+            score.best_half_hour_offset_minutes,
+            score.best_half_hour_error_minutes,
+            score.best_quarter_hour_offset_minutes,
+            score.best_quarter_hour_error_minutes,
+        ));
+    }
+    geojson.push_str("\n]}\n");
+    geojson
+}
+
+fn schematic_latitude(index: usize, count: usize) -> f64 {
+    if count <= 1 {
+        return 0.0;
+    }
+    let top = 48.0;
+    let bottom = 24.0;
+    top - (index as f64 * (top - bottom) / (count - 1) as f64)
+}
+
 fn offset_map_offset(score: &OffsetFitUnitScore, view: OffsetMapView) -> i32 {
     match view {
         OffsetMapView::CurrentStandard => score.current_standard_offset_minutes,
@@ -1702,6 +1747,14 @@ fn escape_xml(value: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+}
+
+fn escape_json(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
 }
 
 fn best_candidate_offset(solar_offset_minutes: f64, step_minutes: i32) -> (i32, f64) {
@@ -2852,6 +2905,18 @@ mod tests {
             assert!(svg.contains("west-b"));
             assert!(svg.contains("UTC-05:45") || view != OffsetMapView::BestQuarterHour);
         }
+    }
+
+    #[test]
+    fn offset_fit_geojson_renders_point_features() {
+        let report = evaluate_offset_fit(&seed_plan_input(), 60).unwrap();
+        let geojson = render_offset_fit_geojson(&report);
+
+        assert!(geojson.contains("\"type\":\"FeatureCollection\""));
+        assert!(geojson.contains("\"id\":\"west-b\""));
+        assert!(geojson.contains("\"coordinates\":[-86.250000"));
+        assert!(geojson.contains("\"best_quarter_hour_offset_minutes\":-345"));
+        assert!(geojson.contains("schematic point"));
     }
 
     #[test]
