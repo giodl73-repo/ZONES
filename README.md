@@ -186,6 +186,19 @@ cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county
 cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/seed-plan.json --geojson data/boundaries/seed-boundaries.geojson --require-all-units --output-dir target/zones/seed-boundary-candidate-maps
 ```
 
+For a local full-national exploratory county map packet, fetch generalized Census
+TIGERweb county boundaries into ignored `target/` artifacts and render the same
+candidate-map packet shape:
+
+```powershell
+.\scripts\write-national-exploratory-county-maps.ps1
+```
+
+This packet is for visual inspection only: it uses equal unit weights,
+longitude-derived analytic offsets, generalized county geometry, and an empty
+adjacency graph. It is not current law, a legal assignment map, a
+population-weighted scorecard, or a recommendation.
+
 The baseline smoke scorecard can be generated under ignored output paths with:
 
 ```powershell

@@ -19,7 +19,7 @@ use zones_core::{
     CountyRepresentativePointSet, CountyTimeZoneAssignmentSet, GeometryJoinOptions,
     ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions, OffsetMapView,
     SourceGatePolicy, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
-    ZonePlanInput,
+    ZonePlanInput, ZoneScenarioKind,
 };
 
 #[derive(Debug, Parser)]
@@ -443,16 +443,18 @@ fn main() -> Result<()> {
             write_json(&output_dir.join("candidate-comparison.json"), &comparison)?;
 
             let mut packet_links = Vec::new();
+            let baseline_label = baseline_packet_label(&input);
+            let baseline_slug = baseline_packet_slug(&input);
             write_offset_candidate_map_packet(
-                &output_dir.join("current-law"),
-                "Current-law baseline",
+                &output_dir.join(baseline_slug),
+                &baseline_label,
                 &input,
                 dst_delta_minutes,
             )?;
             packet_links.push((
-                "Current-law baseline".to_string(),
-                "current-law/atlas/index.html".to_string(),
-                "current-law/offset-fit.geojson".to_string(),
+                baseline_label,
+                format!("{baseline_slug}/atlas/index.html"),
+                format!("{baseline_slug}/offset-fit.geojson"),
             ));
 
             for grid in grids {
@@ -475,7 +477,7 @@ fn main() -> Result<()> {
             let index_path = output_dir.join("index.html");
             fs::write(
                 &index_path,
-                render_offset_candidate_maps_index_html(&input.input_id, &packet_links),
+                render_offset_candidate_maps_index_html(&input, &packet_links),
             )
             .with_context(|| format!("failed to write {}", index_path.display()))?;
             println!("{}", output_dir.display());
@@ -966,8 +968,22 @@ fn write_offset_candidate_map_packet(
     Ok(())
 }
 
+fn baseline_packet_label(input: &ZonePlanInput) -> String {
+    match input.scenario.kind {
+        ZoneScenarioKind::CurrentLaw => "Current-law baseline".to_string(),
+        _ => format!("{} baseline", input.scenario.label),
+    }
+}
+
+fn baseline_packet_slug(input: &ZonePlanInput) -> &'static str {
+    match input.scenario.kind {
+        ZoneScenarioKind::CurrentLaw => "current-law",
+        _ => "baseline",
+    }
+}
+
 fn render_offset_candidate_maps_index_html(
-    input_id: &str,
+    input: &ZonePlanInput,
     packet_links: &[(String, String, String)],
 ) -> String {
     let mut cards = String::new();
@@ -1019,7 +1035,7 @@ li {{
 <body>
 <main>
 <h1>ZONES Candidate Map Packet</h1>
-<p>Input <code>{}</code>. These maps compare current-law and generated offset-grid counterfactuals for internal measurement.</p>
+<p>Input <code>{}</code>. Scenario: <strong>{}</strong> (<code>{}</code>). These maps compare the supplied baseline and generated offset-grid counterfactuals for internal measurement.</p>
 <div class="gate"><strong>Recommendation gate closed.</strong> Candidate maps are not preferred maps, enactment advice, or publication-ready national claims.</div>
 <p><a href="candidate-comparison.json">Candidate comparison JSON</a></p>
 <ul>
@@ -1030,9 +1046,20 @@ li {{
 </body>
 </html>
 "#,
-        html_escape(input_id),
+        html_escape(&input.input_id),
+        html_escape(&input.scenario.label),
+        html_escape(scenario_kind_label(&input.scenario.kind)),
         cards
     )
+}
+
+fn scenario_kind_label(kind: &ZoneScenarioKind) -> &'static str {
+    match kind {
+        ZoneScenarioKind::CurrentLaw => "current-law",
+        ZoneScenarioKind::HistoricalLaw => "historical-law",
+        ZoneScenarioKind::ProposedScenario => "proposed-scenario",
+        ZoneScenarioKind::AnalyticCounterfactual => "analytic-counterfactual",
+    }
 }
 
 fn html_escape(value: &str) -> String {

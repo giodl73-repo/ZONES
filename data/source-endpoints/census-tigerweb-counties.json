@@ -15,9 +15,20 @@
     "maxAllowableOffset": 0.005
   },
   "fixture_path": "data/boundaries/us-county-seed-boundaries.geojson",
+  "national_exploratory_query": {
+    "where": "1=1",
+    "outFields": "GEOID,NAME,STATE,COUNTY,INTPTLAT,INTPTLON",
+    "f": "geojson",
+    "outSR": 4326,
+    "geometryPrecision": 2,
+    "maxAllowableOffset": 0.05,
+    "returnGeometry": true
+  },
+  "national_exploratory_output_dir": "target/zones/us-national-exploratory",
   "license_posture": "Census TIGERweb county geometry is a U.S. Census Bureau public data endpoint; this repo commits only a four-county generalized fixture.",
   "caveats": [
     "Fixture geometry is generalized for local candidate-map inspection and should not be used as a raw national GIS cache.",
+    "National exploratory geometry is generated under ignored target paths by scripts/write-national-exploratory-county-maps.ps1.",
     "County boundaries are administrative geometry, not legal time-zone assignment evidence."
   ]
 }

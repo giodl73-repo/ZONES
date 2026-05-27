@@ -48,6 +48,7 @@ counties and the representative-point method is exploratory.
 - `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --output-dir target/zones/us-county-baseline-seed/candidate-maps`
 - `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --geojson data/boundaries/us-county-seed-boundaries.geojson --require-all-units --output-dir target/zones/us-county-baseline-seed/candidate-boundary-maps`
 - `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/seed-plan.json --geojson data/boundaries/seed-boundaries.geojson --require-all-units --output-dir target/zones/seed-boundary-candidate-maps`
+- `.\scripts\write-national-exploratory-county-maps.ps1`
 - `git diff --check`
 
 ## Status
@@ -79,3 +80,8 @@ In progress.
   source-derived seed GEOIDs, so the seed candidate packet can be generated with
   boundary-backed SVG/GeoJSON maps while raw national GIS cache data stays out of
   git.
+- Added `scripts/write-national-exploratory-county-maps.ps1`, which fetches
+  generalized Census TIGERweb county boundaries into ignored `target/` artifacts
+  and renders a full-national exploratory candidate map packet. The packet keeps
+  the recommendation gate closed and is explicitly not current law, legal advice,
+  a population-weighted scorecard, or a publication-ready national claim.
