@@ -49,6 +49,7 @@ cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- rplan-context-report
+cargo run -p zones-cli -- county-assignment-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report
@@ -99,6 +100,10 @@ foundation manifest.
 RPLAN county-context smoke fixture. It proves the target shape for GEOID-sorted
 county units, adjacency, populations, geometry source context, source hashes, and
 context-hash validation before a national county context is generated.
+`data/legal-assignments/us-county-smoke-current-law.json` is the first committed
+current-law assignment evidence smoke fixture. It carries legal source, clause,
+DOT geometry source, status, and caveats per county-shaped unit; the report stays
+not ready while assignments are placeholders.
 `data/module-boundaries/zones-rplan-rline.json` records which responsibilities
 belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 

@@ -7,8 +7,9 @@ use zones_core::{
     evaluate_zone_plan_input_with_manifest_and_catalog, rplan_context_intake_report, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
-    seed_temporal_dataset, seed_us_county_smoke_rplan_context, seed_zone_catalog,
-    zone_plan_source_ref_report, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
+    seed_temporal_dataset, seed_us_county_smoke_rplan_context,
+    seed_us_county_smoke_time_zone_assignments, seed_zone_catalog, zone_plan_source_ref_report,
+    CountyTimeZoneAssignmentSet, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
     OffsetMapRenderOptions, OffsetMapView, SourceGatePolicy, SourceLimitationMatrix,
     SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
 };
@@ -159,6 +160,13 @@ enum Command {
     RplanContextReport {
         #[arg(default_value = "data/rplan-contexts/us-county-smoke-rplan-context.json")]
         path: PathBuf,
+    },
+    SeedCountyAssignments,
+    CountyAssignmentReport {
+        #[arg(default_value = "data/legal-assignments/us-county-smoke-current-law.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
+        source_manifest: PathBuf,
     },
     SeedZoneCatalog,
     ZoneCatalogReport {
@@ -450,6 +458,37 @@ fn main() -> Result<()> {
             let context: rplan_core::RplanContext = serde_json::from_slice(&bytes)
                 .with_context(|| format!("failed to parse RPLAN context {}", path.display()))?;
             let report = rplan_context_intake_report(&context)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedCountyAssignments => {
+            let assignments = seed_us_county_smoke_time_zone_assignments();
+            println!("{}", serde_json::to_string_pretty(&assignments)?);
+        }
+        Command::CountyAssignmentReport {
+            path,
+            source_manifest,
+        } => {
+            let assignment_bytes = fs::read(&path).with_context(|| {
+                format!("failed to read county assignment set {}", path.display())
+            })?;
+            let assignments: CountyTimeZoneAssignmentSet =
+                serde_json::from_slice(&assignment_bytes).with_context(|| {
+                    format!("failed to parse county assignment set {}", path.display())
+                })?;
+            let source_bytes = fs::read(&source_manifest).with_context(|| {
+                format!(
+                    "failed to read source manifest {}",
+                    source_manifest.display()
+                )
+            })?;
+            let manifest: SourceManifest =
+                serde_json::from_slice(&source_bytes).with_context(|| {
+                    format!(
+                        "failed to parse source manifest {}",
+                        source_manifest.display()
+                    )
+                })?;
+            let report = assignments.report(&manifest)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::SeedZoneCatalog => {

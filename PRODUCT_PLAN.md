@@ -84,6 +84,7 @@ cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- rplan-context-report
+cargo run -p zones-cli -- county-assignment-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report

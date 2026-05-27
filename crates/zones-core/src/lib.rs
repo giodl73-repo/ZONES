@@ -137,6 +137,54 @@ pub struct RplanContextIntakeReport {
     pub rplan_context_ready: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CountyAssignmentStatus {
+    Placeholder,
+    Reconciled,
+    SplitCounty,
+    Uncertain,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountyTimeZoneAssignment {
+    pub unit_id: String,
+    pub zone_id: String,
+    pub legal_source_id: String,
+    pub legal_clause: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geometry_source_id: Option<String>,
+    pub status: CountyAssignmentStatus,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountyTimeZoneAssignmentSet {
+    pub assignment_id: String,
+    pub source_manifest_id: String,
+    pub generated_on: String,
+    pub scenario_id: String,
+    pub assignments: Vec<CountyTimeZoneAssignment>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountyTimeZoneAssignmentReport {
+    pub assignment_id: String,
+    pub source_manifest_id: String,
+    pub assignment_count: usize,
+    pub legal_source_ref_count: usize,
+    pub legal_clause_count: usize,
+    pub geometry_source_ref_count: usize,
+    pub placeholder_count: usize,
+    pub reconciled_count: usize,
+    pub split_county_count: usize,
+    pub uncertain_count: usize,
+    pub caveated_assignment_count: usize,
+    pub caveat_count: usize,
+    pub assignment_evidence_ready: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZonePlanSourceRefReport {
     pub input_id: String,
@@ -707,6 +755,115 @@ impl SourceGatePolicy {
             && report.policy_entry_count == report.source_count
             && report.extra_entry_source_ids.is_empty()
             && report.hash_required_count > 0;
+        Ok(report)
+    }
+}
+
+impl CountyTimeZoneAssignment {
+    pub fn validate(&self, manifest: &SourceManifest) -> Result<(), TemporalModelError> {
+        validate_non_empty("county_time_zone_assignment.unit_id", &self.unit_id)?;
+        validate_non_empty("county_time_zone_assignment.zone_id", &self.zone_id)?;
+        validate_non_empty(
+            "county_time_zone_assignment.legal_source_id",
+            &self.legal_source_id,
+        )?;
+        validate_non_empty(
+            "county_time_zone_assignment.legal_clause",
+            &self.legal_clause,
+        )?;
+        let source_ids = manifest.source_ids();
+        if !source_ids.contains(self.legal_source_id.as_str()) {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_time_zone_assignment.legal_source_id",
+                source_id: self.legal_source_id.clone(),
+            });
+        }
+        if let Some(geometry_source_id) = &self.geometry_source_id {
+            validate_non_empty(
+                "county_time_zone_assignment.geometry_source_id",
+                geometry_source_id,
+            )?;
+            if !source_ids.contains(geometry_source_id.as_str()) {
+                return Err(TemporalModelError::UnknownSourceReference {
+                    owner_kind: "county_time_zone_assignment.geometry_source_id",
+                    source_id: geometry_source_id.clone(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl CountyTimeZoneAssignmentSet {
+    pub fn report(
+        &self,
+        manifest: &SourceManifest,
+    ) -> Result<CountyTimeZoneAssignmentReport, TemporalModelError> {
+        manifest.validate()?;
+        validate_non_empty(
+            "county_time_zone_assignment_set.assignment_id",
+            &self.assignment_id,
+        )?;
+        validate_non_empty(
+            "county_time_zone_assignment_set.source_manifest_id",
+            &self.source_manifest_id,
+        )?;
+        validate_non_empty(
+            "county_time_zone_assignment_set.generated_on",
+            &self.generated_on,
+        )?;
+        validate_non_empty(
+            "county_time_zone_assignment_set.scenario_id",
+            &self.scenario_id,
+        )?;
+        if self.source_manifest_id != manifest.manifest_id {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_time_zone_assignment_set.source_manifest_id",
+                source_id: self.source_manifest_id.clone(),
+            });
+        }
+
+        let mut report = CountyTimeZoneAssignmentReport {
+            assignment_id: self.assignment_id.clone(),
+            source_manifest_id: self.source_manifest_id.clone(),
+            assignment_count: self.assignments.len(),
+            legal_source_ref_count: 0,
+            legal_clause_count: 0,
+            geometry_source_ref_count: 0,
+            placeholder_count: 0,
+            reconciled_count: 0,
+            split_county_count: 0,
+            uncertain_count: 0,
+            caveated_assignment_count: 0,
+            caveat_count: 0,
+            assignment_evidence_ready: false,
+        };
+
+        for assignment in &self.assignments {
+            assignment.validate(manifest)?;
+            report.legal_source_ref_count += 1;
+            report.legal_clause_count += 1;
+            if assignment.geometry_source_id.is_some() {
+                report.geometry_source_ref_count += 1;
+            }
+            match assignment.status {
+                CountyAssignmentStatus::Placeholder => report.placeholder_count += 1,
+                CountyAssignmentStatus::Reconciled => report.reconciled_count += 1,
+                CountyAssignmentStatus::SplitCounty => report.split_county_count += 1,
+                CountyAssignmentStatus::Uncertain => report.uncertain_count += 1,
+            }
+            if !assignment.caveats.is_empty() {
+                report.caveated_assignment_count += 1;
+                report.caveat_count += assignment.caveats.len();
+            }
+        }
+
+        report.assignment_evidence_ready = report.assignment_count > 0
+            && report.legal_source_ref_count == report.assignment_count
+            && report.legal_clause_count == report.assignment_count
+            && report.geometry_source_ref_count == report.assignment_count
+            && report.placeholder_count == 0
+            && report.uncertain_count == 0;
         Ok(report)
     }
 }
@@ -2918,6 +3075,65 @@ pub fn seed_us_county_smoke_rplan_context() -> RplanContext {
     context
 }
 
+pub fn seed_us_county_smoke_time_zone_assignments() -> CountyTimeZoneAssignmentSet {
+    CountyTimeZoneAssignmentSet {
+        assignment_id: "zones-us-county-smoke-current-law-assignments".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        scenario_id: "us-county-smoke-current-law-shape".to_string(),
+        assignments: vec![
+            CountyTimeZoneAssignment {
+                unit_id: "01001".to_string(),
+                zone_id: "utc-minus-06-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "smoke-placeholder-49-cfr-71".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Placeholder,
+                caveats: vec![
+                    "Smoke assignment only; clause-level county evidence is not reconciled."
+                        .to_string(),
+                ],
+            },
+            CountyTimeZoneAssignment {
+                unit_id: "01003".to_string(),
+                zone_id: "utc-minus-06-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "smoke-placeholder-49-cfr-71".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Placeholder,
+                caveats: vec![
+                    "Smoke assignment only; clause-level county evidence is not reconciled."
+                        .to_string(),
+                ],
+            },
+            CountyTimeZoneAssignment {
+                unit_id: "12001".to_string(),
+                zone_id: "utc-minus-05-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "smoke-placeholder-49-cfr-71".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Placeholder,
+                caveats: vec![
+                    "Smoke assignment only; clause-level county evidence is not reconciled."
+                        .to_string(),
+                ],
+            },
+            CountyTimeZoneAssignment {
+                unit_id: "12003".to_string(),
+                zone_id: "utc-minus-05-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "smoke-placeholder-49-cfr-71".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Placeholder,
+                caveats: vec![
+                    "Smoke assignment only; clause-level county evidence is not reconciled."
+                        .to_string(),
+                ],
+            },
+        ],
+    }
+}
+
 fn validate_inputs(
     units: &[BoundaryUnit],
     adjacency: &[Vec<usize>],
@@ -4428,6 +4644,22 @@ mod tests {
         assert_eq!(report.graph_edge_count, 3);
         assert!(report.context_hash_matches);
         assert!(report.rplan_context_ready);
+    }
+
+    #[test]
+    fn committed_county_smoke_assignments_match_seed_assignments() {
+        let assignments: CountyTimeZoneAssignmentSet = serde_json::from_str(include_str!(
+            "../../../data/legal-assignments/us-county-smoke-current-law.json"
+        ))
+        .unwrap();
+
+        assert_eq!(assignments, seed_us_county_smoke_time_zone_assignments());
+        let report = assignments.report(&seed_source_manifest()).unwrap();
+        assert_eq!(report.assignment_count, 4);
+        assert_eq!(report.legal_source_ref_count, 4);
+        assert_eq!(report.geometry_source_ref_count, 4);
+        assert_eq!(report.placeholder_count, 4);
+        assert!(!report.assignment_evidence_ready);
     }
 
     #[test]

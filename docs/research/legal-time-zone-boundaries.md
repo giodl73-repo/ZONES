@@ -55,3 +55,8 @@ county-level score should expose an uncertainty flag when:
   split or uncertain counties before they feed score tables.
 - Create a split-county review table before publishing top-deviation rankings.
 - Select Federal Register proceedings for the D.0 convenience-of-commerce paper.
+
+Run `cargo run -p zones-cli -- county-assignment-report <assignment-set>` before
+feeding current-law assignments into a baseline. Placeholder or uncertain rows
+must keep the report not ready until every county assignment has clause-level
+49 CFR evidence and reconciled geometry notes.

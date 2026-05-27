@@ -1,0 +1,52 @@
+{
+  "assignment_id": "zones-us-county-smoke-current-law-assignments",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-26",
+  "scenario_id": "us-county-smoke-current-law-shape",
+  "assignments": [
+    {
+      "unit_id": "01001",
+      "zone_id": "utc-minus-06-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "smoke-placeholder-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "placeholder",
+      "caveats": [
+        "Smoke assignment only; clause-level county evidence is not reconciled."
+      ]
+    },
+    {
+      "unit_id": "01003",
+      "zone_id": "utc-minus-06-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "smoke-placeholder-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "placeholder",
+      "caveats": [
+        "Smoke assignment only; clause-level county evidence is not reconciled."
+      ]
+    },
+    {
+      "unit_id": "12001",
+      "zone_id": "utc-minus-05-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "smoke-placeholder-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "placeholder",
+      "caveats": [
+        "Smoke assignment only; clause-level county evidence is not reconciled."
+      ]
+    },
+    {
+      "unit_id": "12003",
+      "zone_id": "utc-minus-05-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "smoke-placeholder-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "placeholder",
+      "caveats": [
+        "Smoke assignment only; clause-level county evidence is not reconciled."
+      ]
+    }
+  ]
+}
