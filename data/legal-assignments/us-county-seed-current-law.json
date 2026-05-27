@@ -1,0 +1,52 @@
+{
+  "assignment_id": "zones-us-county-seed-current-law-assignments",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-27",
+  "scenario_id": "us-county-seed-current-law-shape",
+  "assignments": [
+    {
+      "unit_id": "01001",
+      "zone_id": "utc-minus-06-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "49 CFR 71.5(e); 49 CFR 71.6(a)",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "reconciled",
+      "caveats": [
+        "Seed interpretation: Alabama is west of the eastern/central boundary described along the Alabama-Georgia line; county-level DOT geometry reconciliation remains required before publication."
+      ]
+    },
+    {
+      "unit_id": "01003",
+      "zone_id": "utc-minus-06-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "49 CFR 71.5(e); 49 CFR 71.6(a)",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "reconciled",
+      "caveats": [
+        "Seed interpretation: Alabama is west of the eastern/central boundary described along the Alabama-Georgia line; county-level DOT geometry reconciliation remains required before publication."
+      ]
+    },
+    {
+      "unit_id": "12001",
+      "zone_id": "utc-minus-05-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "49 CFR 71.4; 49 CFR 71.5(f)",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "reconciled",
+      "caveats": [
+        "Seed interpretation: county is east of the Florida boundary line described from the Apalachicola/Jackson River and Gulf County line; county-level DOT geometry reconciliation remains required before publication."
+      ]
+    },
+    {
+      "unit_id": "12003",
+      "zone_id": "utc-minus-05-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "legal_clause": "49 CFR 71.4; 49 CFR 71.5(f)",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "reconciled",
+      "caveats": [
+        "Seed interpretation: county is east of the Florida boundary line described from the Apalachicola/Jackson River and Gulf County line; county-level DOT geometry reconciliation remains required before publication."
+      ]
+    }
+  ]
+}

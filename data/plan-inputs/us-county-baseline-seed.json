@@ -26,7 +26,7 @@
         "time_zone_geometry_source_id": "dot-time-zone-map-layer",
         "caveats": [
           "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
-          "Smoke assignment only; clause-level county evidence is not reconciled."
+          "Seed interpretation: Alabama is west of the eastern/central boundary described along the Alabama-Georgia line; county-level DOT geometry reconciliation remains required before publication."
         ]
       }
     },
@@ -48,7 +48,7 @@
         "time_zone_geometry_source_id": "dot-time-zone-map-layer",
         "caveats": [
           "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
-          "Smoke assignment only; clause-level county evidence is not reconciled."
+          "Seed interpretation: Alabama is west of the eastern/central boundary described along the Alabama-Georgia line; county-level DOT geometry reconciliation remains required before publication."
         ]
       }
     },
@@ -70,7 +70,7 @@
         "time_zone_geometry_source_id": "dot-time-zone-map-layer",
         "caveats": [
           "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
-          "Smoke assignment only; clause-level county evidence is not reconciled."
+          "Seed interpretation: county is east of the Florida boundary line described from the Apalachicola/Jackson River and Gulf County line; county-level DOT geometry reconciliation remains required before publication."
         ]
       }
     },
@@ -92,7 +92,7 @@
         "time_zone_geometry_source_id": "dot-time-zone-map-layer",
         "caveats": [
           "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
-          "Smoke assignment only; clause-level county evidence is not reconciled."
+          "Seed interpretation: county is east of the Florida boundary line described from the Apalachicola/Jackson River and Gulf County line; county-level DOT geometry reconciliation remains required before publication."
         ]
       }
     }
@@ -140,7 +140,7 @@
   ],
   "caveats": [
     "Baseline seed input uses source-derived Census Gazetteer points and 2024 county population estimates for four county-shaped rows.",
-    "Current-law assignment evidence remains placeholder and is not publication-ready.",
+    "Current-law assignment evidence cites 49 CFR clauses for the four seed counties but still needs county-level DOT geometry reconciliation before publication.",
     "RPLAN adjacency remains the Pulse 02 smoke adjacency until TIGER-derived county adjacency lands.",
     "Representative points are Census internal points and remain exploratory."
   ]

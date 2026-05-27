@@ -3274,6 +3274,61 @@ pub fn seed_us_county_smoke_time_zone_assignments() -> CountyTimeZoneAssignmentS
     }
 }
 
+pub fn seed_us_county_seed_time_zone_assignments() -> CountyTimeZoneAssignmentSet {
+    CountyTimeZoneAssignmentSet {
+        assignment_id: "zones-us-county-seed-current-law-assignments".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-27".to_string(),
+        scenario_id: "us-county-seed-current-law-shape".to_string(),
+        assignments: vec![
+            CountyTimeZoneAssignment {
+                unit_id: "01001".to_string(),
+                zone_id: "utc-minus-06-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "49 CFR 71.5(e); 49 CFR 71.6(a)".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Reconciled,
+                caveats: vec![
+                    "Seed interpretation: Alabama is west of the eastern/central boundary described along the Alabama-Georgia line; county-level DOT geometry reconciliation remains required before publication.".to_string(),
+                ],
+            },
+            CountyTimeZoneAssignment {
+                unit_id: "01003".to_string(),
+                zone_id: "utc-minus-06-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "49 CFR 71.5(e); 49 CFR 71.6(a)".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Reconciled,
+                caveats: vec![
+                    "Seed interpretation: Alabama is west of the eastern/central boundary described along the Alabama-Georgia line; county-level DOT geometry reconciliation remains required before publication.".to_string(),
+                ],
+            },
+            CountyTimeZoneAssignment {
+                unit_id: "12001".to_string(),
+                zone_id: "utc-minus-05-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "49 CFR 71.4; 49 CFR 71.5(f)".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Reconciled,
+                caveats: vec![
+                    "Seed interpretation: county is east of the Florida boundary line described from the Apalachicola/Jackson River and Gulf County line; county-level DOT geometry reconciliation remains required before publication.".to_string(),
+                ],
+            },
+            CountyTimeZoneAssignment {
+                unit_id: "12003".to_string(),
+                zone_id: "utc-minus-05-00".to_string(),
+                legal_source_id: "dot-49-cfr-71".to_string(),
+                legal_clause: "49 CFR 71.4; 49 CFR 71.5(f)".to_string(),
+                geometry_source_id: Some("dot-time-zone-map-layer".to_string()),
+                status: CountyAssignmentStatus::Reconciled,
+                caveats: vec![
+                    "Seed interpretation: county is east of the Florida boundary line described from the Apalachicola/Jackson River and Gulf County line; county-level DOT geometry reconciliation remains required before publication.".to_string(),
+                ],
+            },
+        ],
+    }
+}
+
 pub fn seed_us_county_smoke_representative_points() -> CountyRepresentativePointSet {
     let records = vec![
         ("01001", 32.5, -86.65),
@@ -3519,12 +3574,12 @@ pub fn seed_us_county_baseline_seed_plan_input() -> ZonePlanInput {
             authority_source_id: Some("dot-49-cfr-71".to_string()),
         },
         &seed_us_county_seed_rplan_context(),
-        &seed_us_county_smoke_time_zone_assignments(),
+        &seed_us_county_seed_time_zone_assignments(),
         &seed_us_county_seed_representative_points(),
         &seed_zone_catalog(),
         vec![
             "Baseline seed input uses source-derived Census Gazetteer points and 2024 county population estimates for four county-shaped rows.".to_string(),
-            "Current-law assignment evidence remains placeholder and is not publication-ready.".to_string(),
+            "Current-law assignment evidence cites 49 CFR clauses for the four seed counties but still needs county-level DOT geometry reconciliation before publication.".to_string(),
             "RPLAN adjacency remains the Pulse 02 smoke adjacency until TIGER-derived county adjacency lands.".to_string(),
             "Representative points are Census internal points and remain exploratory.".to_string(),
         ],
@@ -5074,6 +5129,23 @@ mod tests {
         assert_eq!(report.geometry_source_ref_count, 4);
         assert_eq!(report.placeholder_count, 4);
         assert!(!report.assignment_evidence_ready);
+    }
+
+    #[test]
+    fn committed_county_seed_assignments_match_seed_assignments() {
+        let assignments: CountyTimeZoneAssignmentSet = serde_json::from_str(include_str!(
+            "../../../data/legal-assignments/us-county-seed-current-law.json"
+        ))
+        .unwrap();
+
+        assert_eq!(assignments, seed_us_county_seed_time_zone_assignments());
+        let report = assignments.report(&seed_source_manifest()).unwrap();
+        assert_eq!(report.assignment_count, 4);
+        assert_eq!(report.legal_source_ref_count, 4);
+        assert_eq!(report.geometry_source_ref_count, 4);
+        assert_eq!(report.placeholder_count, 0);
+        assert_eq!(report.reconciled_count, 4);
+        assert!(report.assignment_evidence_ready);
     }
 
     #[test]

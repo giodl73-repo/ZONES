@@ -62,5 +62,9 @@ In progress.
 - The seed replaces placeholder population weights and approximate coordinates
   with Census 2024 county population estimates and Census 2024 Gazetteer internal
   points for the four county-shaped rows.
-- The seed still uses smoke adjacency and placeholder current-law assignments,
-  so it remains blocked from publication.
+- Replaced placeholder current-law assignment rows for the four seed counties
+  with clause-cited 49 CFR evidence:
+  - Alabama seed counties cite `49 CFR 71.5(e); 49 CFR 71.6(a)` for central time.
+  - Florida seed counties cite `49 CFR 71.4; 49 CFR 71.5(f)` for eastern time.
+- The seed still uses smoke adjacency and still needs county-level DOT geometry
+  reconciliation, so it remains blocked from publication.

@@ -9,12 +9,13 @@ use zones_core::{
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
     seed_temporal_dataset, seed_us_county_baseline_seed_plan_input,
     seed_us_county_baseline_smoke_plan_input, seed_us_county_seed_representative_points,
-    seed_us_county_seed_rplan_context, seed_us_county_smoke_representative_points,
-    seed_us_county_smoke_rplan_context, seed_us_county_smoke_time_zone_assignments,
-    seed_zone_catalog, zone_plan_source_ref_report, CountyRepresentativePointSet,
-    CountyTimeZoneAssignmentSet, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
-    OffsetMapRenderOptions, OffsetMapView, SourceGatePolicy, SourceLimitationMatrix,
-    SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
+    seed_us_county_seed_rplan_context, seed_us_county_seed_time_zone_assignments,
+    seed_us_county_smoke_representative_points, seed_us_county_smoke_rplan_context,
+    seed_us_county_smoke_time_zone_assignments, seed_zone_catalog, zone_plan_source_ref_report,
+    CountyRepresentativePointSet, CountyTimeZoneAssignmentSet, GeometryJoinOptions,
+    ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions, OffsetMapView,
+    SourceGatePolicy, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
+    ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -166,6 +167,7 @@ enum Command {
         path: PathBuf,
     },
     SeedCountyAssignments,
+    SeedCountySeedAssignments,
     CountyAssignmentReport {
         #[arg(default_value = "data/legal-assignments/us-county-smoke-current-law.json")]
         path: PathBuf,
@@ -480,6 +482,10 @@ fn main() -> Result<()> {
         }
         Command::SeedCountyAssignments => {
             let assignments = seed_us_county_smoke_time_zone_assignments();
+            println!("{}", serde_json::to_string_pretty(&assignments)?);
+        }
+        Command::SeedCountySeedAssignments => {
+            let assignments = seed_us_county_seed_time_zone_assignments();
             println!("{}", serde_json::to_string_pretty(&assignments)?);
         }
         Command::CountyAssignmentReport {

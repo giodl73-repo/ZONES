@@ -60,3 +60,9 @@ Run `cargo run -p zones-cli -- county-assignment-report <assignment-set>` before
 feeding current-law assignments into a baseline. Placeholder or uncertain rows
 must keep the report not ready until every county assignment has clause-level
 49 CFR evidence and reconciled geometry notes.
+
+The Pulse 03 four-county seed replaces placeholder rows with clause-cited
+evidence for the selected counties. Alabama seed counties cite `49 CFR 71.5(e)`
+and `49 CFR 71.6(a)` for central time. Florida seed counties cite `49 CFR 71.4`
+and `49 CFR 71.5(f)` for eastern time. The seed remains blocked from publication
+until county-level DOT geometry reconciliation is complete.
