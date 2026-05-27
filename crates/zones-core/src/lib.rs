@@ -219,6 +219,49 @@ pub struct CountyRepresentativePointReport {
     pub strong_claim_point_method_ready: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum GeometryReconciliationStatus {
+    Pending,
+    Reconciled,
+    SplitCounty,
+    Mismatch,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountyGeometryReconciliation {
+    pub unit_id: String,
+    pub assignment_zone_id: String,
+    pub legal_source_id: String,
+    pub geometry_source_id: String,
+    pub status: GeometryReconciliationStatus,
+    pub evidence_note: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountyGeometryReconciliationSet {
+    pub reconciliation_id: String,
+    pub source_manifest_id: String,
+    pub generated_on: String,
+    pub rows: Vec<CountyGeometryReconciliation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountyGeometryReconciliationReport {
+    pub reconciliation_id: String,
+    pub source_manifest_id: String,
+    pub row_count: usize,
+    pub pending_count: usize,
+    pub reconciled_count: usize,
+    pub split_county_count: usize,
+    pub mismatch_count: usize,
+    pub caveated_row_count: usize,
+    pub caveat_count: usize,
+    pub geometry_reconciliation_ready: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZonePlanSourceRefReport {
     pub input_id: String,
@@ -989,6 +1032,98 @@ impl CountyRepresentativePointSet {
         report.strong_claim_point_method_ready = report.record_count > 0
             && report.population_center_count == report.record_count
             && report.max_solar_offset_delta_minutes < 1e-9;
+        Ok(report)
+    }
+}
+
+impl CountyGeometryReconciliation {
+    pub fn validate(&self, manifest: &SourceManifest) -> Result<(), TemporalModelError> {
+        validate_non_empty("county_geometry_reconciliation.unit_id", &self.unit_id)?;
+        validate_non_empty(
+            "county_geometry_reconciliation.assignment_zone_id",
+            &self.assignment_zone_id,
+        )?;
+        validate_non_empty(
+            "county_geometry_reconciliation.legal_source_id",
+            &self.legal_source_id,
+        )?;
+        validate_non_empty(
+            "county_geometry_reconciliation.geometry_source_id",
+            &self.geometry_source_id,
+        )?;
+        validate_non_empty(
+            "county_geometry_reconciliation.evidence_note",
+            &self.evidence_note,
+        )?;
+        let source_ids = manifest.source_ids();
+        if !source_ids.contains(self.legal_source_id.as_str()) {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_geometry_reconciliation.legal_source_id",
+                source_id: self.legal_source_id.clone(),
+            });
+        }
+        if !source_ids.contains(self.geometry_source_id.as_str()) {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_geometry_reconciliation.geometry_source_id",
+                source_id: self.geometry_source_id.clone(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl CountyGeometryReconciliationSet {
+    pub fn report(
+        &self,
+        manifest: &SourceManifest,
+    ) -> Result<CountyGeometryReconciliationReport, TemporalModelError> {
+        manifest.validate()?;
+        validate_non_empty(
+            "county_geometry_reconciliation_set.reconciliation_id",
+            &self.reconciliation_id,
+        )?;
+        validate_non_empty(
+            "county_geometry_reconciliation_set.source_manifest_id",
+            &self.source_manifest_id,
+        )?;
+        validate_non_empty(
+            "county_geometry_reconciliation_set.generated_on",
+            &self.generated_on,
+        )?;
+        if self.source_manifest_id != manifest.manifest_id {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_geometry_reconciliation_set.source_manifest_id",
+                source_id: self.source_manifest_id.clone(),
+            });
+        }
+
+        let mut report = CountyGeometryReconciliationReport {
+            reconciliation_id: self.reconciliation_id.clone(),
+            source_manifest_id: self.source_manifest_id.clone(),
+            row_count: self.rows.len(),
+            pending_count: 0,
+            reconciled_count: 0,
+            split_county_count: 0,
+            mismatch_count: 0,
+            caveated_row_count: 0,
+            caveat_count: 0,
+            geometry_reconciliation_ready: false,
+        };
+        for row in &self.rows {
+            row.validate(manifest)?;
+            match row.status {
+                GeometryReconciliationStatus::Pending => report.pending_count += 1,
+                GeometryReconciliationStatus::Reconciled => report.reconciled_count += 1,
+                GeometryReconciliationStatus::SplitCounty => report.split_county_count += 1,
+                GeometryReconciliationStatus::Mismatch => report.mismatch_count += 1,
+            }
+            if !row.caveats.is_empty() {
+                report.caveated_row_count += 1;
+                report.caveat_count += row.caveats.len();
+            }
+        }
+        report.geometry_reconciliation_ready =
+            report.row_count > 0 && report.reconciled_count == report.row_count;
         Ok(report)
     }
 }
@@ -3333,6 +3468,36 @@ pub fn seed_us_county_seed_time_zone_assignments() -> CountyTimeZoneAssignmentSe
     }
 }
 
+pub fn seed_us_county_seed_geometry_reconciliation() -> CountyGeometryReconciliationSet {
+    let rows = seed_us_county_seed_time_zone_assignments()
+        .assignments
+        .into_iter()
+        .map(|assignment| CountyGeometryReconciliation {
+            unit_id: assignment.unit_id,
+            assignment_zone_id: assignment.zone_id,
+            legal_source_id: assignment.legal_source_id,
+            geometry_source_id: assignment
+                .geometry_source_id
+                .unwrap_or_else(|| "dot-time-zone-map-layer".to_string()),
+            status: GeometryReconciliationStatus::Pending,
+            evidence_note:
+                "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed."
+                    .to_string(),
+            caveats: vec![
+                "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+                    .to_string(),
+            ],
+        })
+        .collect();
+
+    CountyGeometryReconciliationSet {
+        reconciliation_id: "zones-us-county-seed-dot-geometry-reconciliation".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-27".to_string(),
+        rows,
+    }
+}
+
 pub fn seed_us_county_smoke_representative_points() -> CountyRepresentativePointSet {
     let records = vec![
         ("01001", 32.5, -86.65),
@@ -5151,6 +5316,24 @@ mod tests {
         assert_eq!(report.placeholder_count, 0);
         assert_eq!(report.reconciled_count, 4);
         assert!(report.assignment_evidence_ready);
+    }
+
+    #[test]
+    fn committed_county_seed_geometry_reconciliation_matches_seed_reconciliation() {
+        let reconciliation: CountyGeometryReconciliationSet = serde_json::from_str(include_str!(
+            "../../../data/geometry-reconciliation/us-county-seed-dot-reconciliation.json"
+        ))
+        .unwrap();
+
+        assert_eq!(
+            reconciliation,
+            seed_us_county_seed_geometry_reconciliation()
+        );
+        let report = reconciliation.report(&seed_source_manifest()).unwrap();
+        assert_eq!(report.row_count, 4);
+        assert_eq!(report.pending_count, 4);
+        assert_eq!(report.caveated_row_count, 4);
+        assert!(!report.geometry_reconciliation_ready);
     }
 
     #[test]

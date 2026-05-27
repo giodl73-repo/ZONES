@@ -1,0 +1,51 @@
+{
+  "reconciliation_id": "zones-us-county-seed-dot-geometry-reconciliation",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-27",
+  "rows": [
+    {
+      "unit_id": "01001",
+      "assignment_zone_id": "utc-minus-06-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "pending",
+      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "caveats": [
+        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+      ]
+    },
+    {
+      "unit_id": "01003",
+      "assignment_zone_id": "utc-minus-06-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "pending",
+      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "caveats": [
+        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+      ]
+    },
+    {
+      "unit_id": "12001",
+      "assignment_zone_id": "utc-minus-05-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "pending",
+      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "caveats": [
+        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+      ]
+    },
+    {
+      "unit_id": "12003",
+      "assignment_zone_id": "utc-minus-05-00",
+      "legal_source_id": "dot-49-cfr-71",
+      "geometry_source_id": "dot-time-zone-map-layer",
+      "status": "pending",
+      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "caveats": [
+        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+      ]
+    }
+  ]
+}

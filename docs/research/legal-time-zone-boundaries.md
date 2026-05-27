@@ -66,3 +66,7 @@ evidence for the selected counties. Alabama seed counties cite `49 CFR 71.5(e)`
 and `49 CFR 71.6(a)` for central time. Florida seed counties cite `49 CFR 71.4`
 and `49 CFR 71.5(f)` for eastern time. The seed remains blocked from publication
 until county-level DOT geometry reconciliation is complete.
+
+Run `cargo run -p zones-cli -- geometry-reconciliation-report <reconciliation>`
+to check the DOT geometry gate. `geometry_reconciliation_ready: false` blocks
+publication even when legal clause evidence is present.

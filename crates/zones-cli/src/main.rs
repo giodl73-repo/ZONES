@@ -8,10 +8,11 @@ use zones_core::{
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
     seed_temporal_dataset, seed_us_county_baseline_seed_plan_input,
-    seed_us_county_baseline_smoke_plan_input, seed_us_county_seed_representative_points,
-    seed_us_county_seed_rplan_context, seed_us_county_seed_time_zone_assignments,
-    seed_us_county_smoke_representative_points, seed_us_county_smoke_rplan_context,
-    seed_us_county_smoke_time_zone_assignments, seed_zone_catalog, zone_plan_source_ref_report,
+    seed_us_county_baseline_smoke_plan_input, seed_us_county_seed_geometry_reconciliation,
+    seed_us_county_seed_representative_points, seed_us_county_seed_rplan_context,
+    seed_us_county_seed_time_zone_assignments, seed_us_county_smoke_representative_points,
+    seed_us_county_smoke_rplan_context, seed_us_county_smoke_time_zone_assignments,
+    seed_zone_catalog, zone_plan_source_ref_report, CountyGeometryReconciliationSet,
     CountyRepresentativePointSet, CountyTimeZoneAssignmentSet, GeometryJoinOptions,
     ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions, OffsetMapView,
     SourceGatePolicy, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
@@ -170,6 +171,15 @@ enum Command {
     SeedCountySeedAssignments,
     CountyAssignmentReport {
         #[arg(default_value = "data/legal-assignments/us-county-smoke-current-law.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
+        source_manifest: PathBuf,
+    },
+    SeedCountyGeometryReconciliation,
+    GeometryReconciliationReport {
+        #[arg(
+            default_value = "data/geometry-reconciliation/us-county-seed-dot-reconciliation.json"
+        )]
         path: PathBuf,
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
@@ -513,6 +523,37 @@ fn main() -> Result<()> {
                     )
                 })?;
             let report = assignments.report(&manifest)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedCountyGeometryReconciliation => {
+            let reconciliation = seed_us_county_seed_geometry_reconciliation();
+            println!("{}", serde_json::to_string_pretty(&reconciliation)?);
+        }
+        Command::GeometryReconciliationReport {
+            path,
+            source_manifest,
+        } => {
+            let reconciliation_bytes = fs::read(&path).with_context(|| {
+                format!("failed to read geometry reconciliation {}", path.display())
+            })?;
+            let reconciliation: CountyGeometryReconciliationSet =
+                serde_json::from_slice(&reconciliation_bytes).with_context(|| {
+                    format!("failed to parse geometry reconciliation {}", path.display())
+                })?;
+            let source_bytes = fs::read(&source_manifest).with_context(|| {
+                format!(
+                    "failed to read source manifest {}",
+                    source_manifest.display()
+                )
+            })?;
+            let manifest: SourceManifest =
+                serde_json::from_slice(&source_bytes).with_context(|| {
+                    format!(
+                        "failed to parse source manifest {}",
+                        source_manifest.display()
+                    )
+                })?;
+            let report = reconciliation.report(&manifest)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::SeedRepresentativePoints => {

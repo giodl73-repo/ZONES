@@ -50,6 +50,7 @@ cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- rplan-context-report
 cargo run -p zones-cli -- county-assignment-report
+cargo run -p zones-cli -- geometry-reconciliation-report
 cargo run -p zones-cli -- representative-point-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
@@ -154,6 +155,9 @@ It also replaces smoke adjacency with TIGER-derived adjacency for the selected
 four-county set; those counties have no boundary adjacencies among themselves, so
 the seed report is intentionally disconnected. DOT geometry reconciliation is
 still pending.
+`data/geometry-reconciliation/us-county-seed-dot-reconciliation.json` tracks DOT
+geometry reconciliation as a separate publication gate; the seed remains blocked
+while rows are pending.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.

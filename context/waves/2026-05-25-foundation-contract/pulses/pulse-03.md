@@ -70,5 +70,7 @@ In progress.
   counties. The selected counties have no boundary adjacencies among themselves,
   so the seed current-plan report correctly has zero boundary edges and
   disconnected zones.
-- The seed still needs county-level DOT geometry reconciliation, so it remains
-  blocked from publication.
+- Added `data/geometry-reconciliation/us-county-seed-dot-reconciliation.json`
+  and `geometry-reconciliation-report` to track DOT geometry reconciliation as a
+  separate publication gate. All four seed rows are currently pending
+  reconciliation, so the seed remains blocked from publication.
