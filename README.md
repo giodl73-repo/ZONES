@@ -47,6 +47,15 @@ cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- zone-catalog-report
+cargo run -p zones-cli -- temporal-dataset-report
+cargo run -p zones-cli -- source-limitation-report
+cargo run -p zones-cli -- module-boundary-report
+cargo run -p zones-cli -- offset-fit
+cargo run -p zones-cli -- write-offset-fit
+cargo run -p zones-cli -- write-offset-maps
+cargo run -p zones-cli -- write-offset-atlas
+cargo run -p zones-cli -- write-offset-geojson
+cargo run -p zones-cli -- write-offset-candidate-plan
 ```
 
 The seed report runs a tiny four-county fixture through the first plan evaluator.

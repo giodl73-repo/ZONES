@@ -17,9 +17,22 @@ solar-time error, jurisdiction stability, source assumptions, and map outputs.
 | Pulse | Title | Status | Outcome |
 |------:|-------|--------|---------|
 | 01 | Workspace foundation | done | Create repo skeleton, docs, skills, and first tested RPLAN-backed evaluator. |
-| 02 | Source inventory | pending | List boundary, time-zone, longitude, and population sources with rights posture, starting from BISECT/RPLAN conventions. |
+| 02 | US county source intake | ready | Convert the source inventory into the first reproducible county-level plan input contract. |
 | 03 | US county seed graph | pending | Build the first real county-level graph fixture and current-plan scorecard. |
 | 04 | Candidate scoring report | pending | Compare current and proposed plans with explicit tradeoff weights. |
+
+## Current implementation state
+
+After Pulse 01, the foundation contract has expanded beyond the original seed
+evaluator. The repo now has source manifests, zone catalogs, a temporal pilot
+fixture, a source-limitation matrix, a ZONES/RPLAN/RLINE module-boundary
+contract, offset-fit scoring, ranked JSON/CSV outputs, SVG map and atlas
+rendering, GeoJSON export, boundary-geometry joins, and nearest-offset candidate
+plan generation.
+
+Pulse 02 should not add recommendation language. It should turn the documented
+US source inventory into a small, auditable county-level input path that can feed
+the existing evaluator and map/report commands.
 
 ## Success criteria
 
