@@ -7,9 +7,9 @@ use zones_core::{
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_limitation_matrix, seed_source_manifest, seed_temporal_dataset, seed_zone_catalog,
-    GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions,
-    OffsetMapView, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
-    ZonePlanInput,
+    zone_plan_source_ref_report, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
+    OffsetMapRenderOptions, OffsetMapView, SourceLimitationMatrix, SourceManifest, TemporalDataset,
+    ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -140,6 +140,12 @@ enum Command {
     SourceReport {
         #[arg(default_value = "data/source-manifests/us-foundation.json")]
         path: PathBuf,
+    },
+    SourceRefReport {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
+        source_manifest: PathBuf,
     },
     SeedZoneCatalog,
     ZoneCatalogReport {
@@ -383,6 +389,14 @@ fn main() -> Result<()> {
             let report = manifest.report()?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
+        Command::SourceRefReport {
+            path,
+            source_manifest,
+        } => {
+            let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
+            let report = zone_plan_source_ref_report(&input, &manifest)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
         Command::SeedZoneCatalog => {
             let catalog = seed_zone_catalog();
             println!("{}", serde_json::to_string_pretty(&catalog)?);
@@ -440,6 +454,18 @@ fn read_plan_manifest_and_catalog(
     source_manifest: &PathBuf,
     zone_catalog: &PathBuf,
 ) -> Result<(ZonePlanInput, SourceManifest, ZoneCatalog)> {
+    let (input, manifest) = read_plan_and_manifest(path, source_manifest)?;
+    let catalog_bytes = fs::read(zone_catalog)
+        .with_context(|| format!("failed to read zone catalog {}", zone_catalog.display()))?;
+    let catalog: ZoneCatalog = serde_json::from_slice(&catalog_bytes)
+        .with_context(|| format!("failed to parse zone catalog {}", zone_catalog.display()))?;
+    Ok((input, manifest, catalog))
+}
+
+fn read_plan_and_manifest(
+    path: &PathBuf,
+    source_manifest: &PathBuf,
+) -> Result<(ZonePlanInput, SourceManifest)> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     let input: ZonePlanInput = serde_json::from_slice(&bytes)
         .with_context(|| format!("failed to parse {}", path.display()))?;
@@ -455,11 +481,7 @@ fn read_plan_manifest_and_catalog(
             source_manifest.display()
         )
     })?;
-    let catalog_bytes = fs::read(zone_catalog)
-        .with_context(|| format!("failed to read zone catalog {}", zone_catalog.display()))?;
-    let catalog: ZoneCatalog = serde_json::from_slice(&catalog_bytes)
-        .with_context(|| format!("failed to parse zone catalog {}", zone_catalog.display()))?;
-    Ok((input, manifest, catalog))
+    Ok((input, manifest))
 }
 
 fn offset_map_views() -> [OffsetMapView; 5] {

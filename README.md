@@ -46,6 +46,7 @@ cargo run -p zones-cli -- evaluate-plan
 cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
+cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report
@@ -57,6 +58,7 @@ cargo run -p zones-cli -- write-offset-atlas
 cargo run -p zones-cli -- write-offset-geojson
 cargo run -p zones-cli -- write-offset-candidate-plan
 cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-smoke.json
+cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json
 ```
 
 The seed report runs a tiny four-county fixture through the first plan evaluator.
@@ -118,6 +120,8 @@ fixture. It uses GEOID-shaped ids and explicit caveats to prove the evaluator
 contract without claiming a source-derived national county scorecard. Its
 per-unit `source_refs` fields make boundary, point, population, time-zone
 assignment, geometry, and split-county caveats machine-readable.
+`source-ref-report` summarizes that per-unit source-reference coverage so smoke
+fixtures and future county intakes can be checked before publishing scores.
 
 ## Non-goals
 

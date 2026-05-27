@@ -37,6 +37,11 @@ Every boundary unit used in a published score must carry:
 - any known split between legal time-zone boundary and chosen administrative
   unit.
 
+Run `cargo run -p zones-cli -- source-ref-report <plan-input>` before publishing
+county-level score tables; every county record should have source references for
+boundary, representative point, population, legal assignment, and time-zone
+geometry, plus caveats for unresolved split-county status.
+
 ## Representative Point Levels
 
 ZONES should support at least four representative-point methods:

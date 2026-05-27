@@ -111,6 +111,8 @@ The portable JSON plan-input contract contains:
 This is intentionally shallow at the foundation layer: later county baselines
 must add per-field source references, but even the seed path should reject a
 plan file whose manifest identity does not match the supplied manifest.
+`source-ref-report` summarizes per-unit source-reference coverage and caveat
+counts before a county-shaped input is treated as publishable evidence.
 Current-law and historical-law scenarios must reference an authority source in
 the supplied source manifest; proposed and counterfactual scenarios may omit it
 when clearly labeled.
@@ -212,6 +214,7 @@ cargo run -p zones-cli -- evaluate-plan
 cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
+cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report

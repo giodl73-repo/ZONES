@@ -56,6 +56,21 @@ pub struct SourceManifestReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ZonePlanSourceRefReport {
+    pub input_id: String,
+    pub source_manifest_id: String,
+    pub unit_count: usize,
+    pub units_with_source_refs: usize,
+    pub boundary_source_ref_count: usize,
+    pub representative_point_source_ref_count: usize,
+    pub population_source_ref_count: usize,
+    pub time_zone_assignment_source_ref_count: usize,
+    pub time_zone_geometry_source_ref_count: usize,
+    pub units_with_source_caveats: usize,
+    pub unit_source_caveat_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SourceClaim {
     OffsetRuleHistory,
@@ -1623,6 +1638,56 @@ pub fn evaluate_zone_plan_input_with_manifest(
 ) -> Result<ZonePlanReport, ZonePlanError> {
     validate_input_manifest_pair(input, manifest)?;
     evaluate_zone_plan_input(input)
+}
+
+pub fn zone_plan_source_ref_report(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+) -> Result<ZonePlanSourceRefReport, ZonePlanError> {
+    validate_input_manifest_pair(input, manifest)?;
+    evaluate_zone_plan_input(input)?;
+
+    let mut report = ZonePlanSourceRefReport {
+        input_id: input.input_id.clone(),
+        source_manifest_id: manifest.manifest_id.clone(),
+        unit_count: input.units.len(),
+        units_with_source_refs: 0,
+        boundary_source_ref_count: 0,
+        representative_point_source_ref_count: 0,
+        population_source_ref_count: 0,
+        time_zone_assignment_source_ref_count: 0,
+        time_zone_geometry_source_ref_count: 0,
+        units_with_source_caveats: 0,
+        unit_source_caveat_count: 0,
+    };
+
+    for unit in &input.units {
+        let Some(source_refs) = &unit.source_refs else {
+            continue;
+        };
+        report.units_with_source_refs += 1;
+        if source_refs.boundary_source_id.is_some() {
+            report.boundary_source_ref_count += 1;
+        }
+        if source_refs.representative_point_source_id.is_some() {
+            report.representative_point_source_ref_count += 1;
+        }
+        if source_refs.population_source_id.is_some() {
+            report.population_source_ref_count += 1;
+        }
+        if source_refs.time_zone_assignment_source_id.is_some() {
+            report.time_zone_assignment_source_ref_count += 1;
+        }
+        if source_refs.time_zone_geometry_source_id.is_some() {
+            report.time_zone_geometry_source_ref_count += 1;
+        }
+        if !source_refs.caveats.is_empty() {
+            report.units_with_source_caveats += 1;
+            report.unit_source_caveat_count += source_refs.caveats.len();
+        }
+    }
+
+    Ok(report)
 }
 
 pub fn evaluate_zone_plan_input_with_manifest_and_catalog(
@@ -4212,6 +4277,27 @@ mod tests {
         assert_eq!(report.unit_count, 4);
         assert_eq!(report.zone_count, 2);
         assert!(report.all_zones_connected);
+    }
+
+    #[test]
+    fn county_smoke_source_ref_report_counts_intake_coverage() {
+        let input: ZonePlanInput = serde_json::from_str(include_str!(
+            "../../../data/plan-inputs/us-county-smoke.json"
+        ))
+        .unwrap();
+
+        let report = zone_plan_source_ref_report(&input, &seed_source_manifest()).unwrap();
+
+        assert_eq!(report.input_id, "zones-us-county-smoke-plan-input");
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.units_with_source_refs, 4);
+        assert_eq!(report.boundary_source_ref_count, 4);
+        assert_eq!(report.representative_point_source_ref_count, 4);
+        assert_eq!(report.population_source_ref_count, 4);
+        assert_eq!(report.time_zone_assignment_source_ref_count, 4);
+        assert_eq!(report.time_zone_geometry_source_ref_count, 4);
+        assert_eq!(report.units_with_source_caveats, 4);
+        assert_eq!(report.unit_source_caveat_count, 8);
     }
 
     #[test]

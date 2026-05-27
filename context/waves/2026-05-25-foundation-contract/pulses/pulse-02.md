@@ -38,6 +38,7 @@ fixture-level until a county source intake can produce auditable inputs.
 - `cargo run -p zones-cli -- evaluate-plan`
 - `cargo run -p zones-cli -- evaluate-plan-detail`
 - `cargo run -p zones-cli -- source-report`
+- `cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json`
 - `cargo run -p zones-cli -- offset-fit`
 - `cargo run -p zones-cli -- write-offset-candidate-plan`
 - `git diff --check`
@@ -56,3 +57,6 @@ In progress.
 - Added per-unit `source_refs` so county-shaped inputs can cite boundary,
   representative point, population, legal assignment, and time-zone geometry
   sources, with split-county caveats carried into detailed score output.
+- Added `source-ref-report` to summarize source-reference coverage and caveat
+  counts for county-shaped inputs before they can graduate from smoke fixture to
+  publishable scorecard.
