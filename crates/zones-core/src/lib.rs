@@ -3200,6 +3200,21 @@ pub fn seed_us_county_smoke_rplan_context() -> RplanContext {
     context
 }
 
+pub fn seed_us_county_seed_rplan_context() -> RplanContext {
+    let mut context = seed_us_county_smoke_rplan_context();
+    context.populations = Some(vec![61_464, 261_608, 291_782, 29_325]);
+    context.source_hashes.entries.insert(
+        "census-tiger-counties-2024".to_string(),
+        "sha256:0a121d136b434e3ae749d053db19dfbacbb56eebf30335cfa5031388803b4451".to_string(),
+    );
+    context.source_hashes.entries.insert(
+        "census-county-population-estimates-2024".to_string(),
+        "sha256:abcc8720d669e793bbfdcd440eeec37a78db3b452adbe4ccd1eadf7c72b522b9".to_string(),
+    );
+    context.context_hash = context.compute_context_hash().unwrap();
+    context
+}
+
 pub fn seed_us_county_smoke_time_zone_assignments() -> CountyTimeZoneAssignmentSet {
     CountyTimeZoneAssignmentSet {
         assignment_id: "zones-us-county-smoke-current-law-assignments".to_string(),
@@ -3289,6 +3304,40 @@ pub fn seed_us_county_smoke_representative_points() -> CountyRepresentativePoint
         point_set_id: "zones-us-county-smoke-representative-points".to_string(),
         source_manifest_id: "zones-us-foundation-sources".to_string(),
         generated_on: "2026-05-26".to_string(),
+        records,
+    }
+}
+
+pub fn seed_us_county_seed_representative_points() -> CountyRepresentativePointSet {
+    let records = vec![
+        ("01001", 32.532237, -86.64644),
+        ("01003", 30.659218, -87.746067),
+        ("12001", 29.67574, -82.357221),
+        ("12003", 30.324442, -82.302284),
+    ]
+    .into_iter()
+    .map(|(unit_id, latitude, longitude)| {
+        let point = RepresentativePoint {
+            latitude,
+            longitude,
+            method: RepresentativePointMethod::InternalPoint,
+            source_id: "census-county-gazetteer-2024".to_string(),
+        };
+        CountyRepresentativePointRecord {
+            unit_id: unit_id.to_string(),
+            solar_offset_minutes: point.solar_offset_minutes(),
+            point,
+            caveats: vec![
+                "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.".to_string(),
+            ],
+        }
+    })
+    .collect();
+
+    CountyRepresentativePointSet {
+        point_set_id: "zones-us-county-seed-representative-points".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-27".to_string(),
         records,
     }
 }
@@ -3454,6 +3503,29 @@ pub fn seed_us_county_baseline_smoke_plan_input() -> ZonePlanInput {
         vec![
             "Baseline smoke input assembled from RPLAN context, assignment, and representative-point smoke fixtures.".to_string(),
             "Current-law assignment evidence remains placeholder and is not publication-ready.".to_string(),
+            "Representative points are Census internal points and remain exploratory.".to_string(),
+        ],
+    )
+    .unwrap()
+}
+
+pub fn seed_us_county_baseline_seed_plan_input() -> ZonePlanInput {
+    build_county_baseline_plan_input(
+        "zones-us-county-baseline-seed-plan-input",
+        ZoneScenario {
+            scenario_id: "us-county-seed-current-law-shape".to_string(),
+            kind: ZoneScenarioKind::CurrentLaw,
+            label: "US county seed current-law baseline input".to_string(),
+            authority_source_id: Some("dot-49-cfr-71".to_string()),
+        },
+        &seed_us_county_seed_rplan_context(),
+        &seed_us_county_smoke_time_zone_assignments(),
+        &seed_us_county_seed_representative_points(),
+        &seed_zone_catalog(),
+        vec![
+            "Baseline seed input uses source-derived Census Gazetteer points and 2024 county population estimates for four county-shaped rows.".to_string(),
+            "Current-law assignment evidence remains placeholder and is not publication-ready.".to_string(),
+            "RPLAN adjacency remains the Pulse 02 smoke adjacency until TIGER-derived county adjacency lands.".to_string(),
             "Representative points are Census internal points and remain exploratory.".to_string(),
         ],
     )
@@ -4973,6 +5045,22 @@ mod tests {
     }
 
     #[test]
+    fn committed_county_seed_rplan_context_matches_seed_context() {
+        let context: RplanContext = serde_json::from_str(include_str!(
+            "../../../data/rplan-contexts/us-county-seed-rplan-context.json"
+        ))
+        .unwrap();
+
+        assert_eq!(context, seed_us_county_seed_rplan_context());
+        let report = rplan_context_intake_report(&context).unwrap();
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.population_count, 4);
+        assert_eq!(report.source_hash_count, 2);
+        assert!(report.context_hash_matches);
+        assert!(report.rplan_context_ready);
+    }
+
+    #[test]
     fn committed_county_smoke_assignments_match_seed_assignments() {
         let assignments: CountyTimeZoneAssignmentSet = serde_json::from_str(include_str!(
             "../../../data/legal-assignments/us-county-smoke-current-law.json"
@@ -4996,6 +5084,23 @@ mod tests {
         .unwrap();
 
         assert_eq!(points, seed_us_county_smoke_representative_points());
+        let report = points.report(&seed_source_manifest()).unwrap();
+        assert_eq!(report.record_count, 4);
+        assert_eq!(report.internal_point_count, 4);
+        assert_eq!(report.caveated_record_count, 4);
+        assert_eq!(report.max_solar_offset_delta_minutes, 0.0);
+        assert!(report.exploratory_point_method);
+        assert!(!report.strong_claim_point_method_ready);
+    }
+
+    #[test]
+    fn committed_county_seed_representative_points_match_seed_points() {
+        let points: CountyRepresentativePointSet = serde_json::from_str(include_str!(
+            "../../../data/representative-points/us-county-seed-gazetteer.json"
+        ))
+        .unwrap();
+
+        assert_eq!(points, seed_us_county_seed_representative_points());
         let report = points.report(&seed_source_manifest()).unwrap();
         assert_eq!(report.record_count, 4);
         assert_eq!(report.internal_point_count, 4);
@@ -5405,6 +5510,30 @@ mod tests {
         assert_eq!(report.unit_count, 4);
         assert_eq!(report.zone_count, 2);
         assert!(report.all_zones_connected);
+        assert!(source_ref_report.publishable_source_ref_coverage);
+    }
+
+    #[test]
+    fn committed_county_baseline_seed_plan_matches_seed_input() {
+        let input: ZonePlanInput = serde_json::from_str(include_str!(
+            "../../../data/plan-inputs/us-county-baseline-seed.json"
+        ))
+        .unwrap();
+
+        assert_eq!(input, seed_us_county_baseline_seed_plan_input());
+        let report = evaluate_zone_plan_input_with_manifest_and_catalog(
+            &input,
+            &seed_source_manifest(),
+            &seed_zone_catalog(),
+        )
+        .unwrap();
+        let source_ref_report =
+            zone_plan_source_ref_report(&input, &seed_source_manifest()).unwrap();
+
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.zone_count, 2);
+        assert!(report.all_zones_connected);
+        assert!(report.weighted_mean_absolute_error_minutes > 0.0);
         assert!(source_ref_report.publishable_source_ref_coverage);
     }
 

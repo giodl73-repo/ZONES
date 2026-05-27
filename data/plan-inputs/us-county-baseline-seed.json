@@ -1,0 +1,147 @@
+{
+  "input_id": "zones-us-county-baseline-seed-plan-input",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "scenario": {
+    "scenario_id": "us-county-seed-current-law-shape",
+    "kind": "current-law",
+    "label": "US county seed current-law baseline input",
+    "authority_source_id": "dot-49-cfr-71"
+  },
+  "units": [
+    {
+      "id": "01001",
+      "name": "GEOID 01001 baseline smoke unit",
+      "solar_offset_minutes": -346.58576,
+      "population": 61464,
+      "map_point": {
+        "latitude": 32.532237,
+        "longitude": -86.64644,
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
+          "Smoke assignment only; clause-level county evidence is not reconciled."
+        ]
+      }
+    },
+    {
+      "id": "01003",
+      "name": "GEOID 01003 baseline smoke unit",
+      "solar_offset_minutes": -350.984268,
+      "population": 261608,
+      "map_point": {
+        "latitude": 30.659218,
+        "longitude": -87.746067,
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
+          "Smoke assignment only; clause-level county evidence is not reconciled."
+        ]
+      }
+    },
+    {
+      "id": "12001",
+      "name": "GEOID 12001 baseline smoke unit",
+      "solar_offset_minutes": -329.428884,
+      "population": 291782,
+      "map_point": {
+        "latitude": 29.67574,
+        "longitude": -82.357221,
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
+          "Smoke assignment only; clause-level county evidence is not reconciled."
+        ]
+      }
+    },
+    {
+      "id": "12003",
+      "name": "GEOID 12003 baseline smoke unit",
+      "solar_offset_minutes": -329.209136,
+      "population": 29325,
+      "map_point": {
+        "latitude": 30.324442,
+        "longitude": -82.302284,
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted.",
+          "Smoke assignment only; clause-level county evidence is not reconciled."
+        ]
+      }
+    }
+  ],
+  "adjacency": [
+    [
+      1
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      2
+    ]
+  ],
+  "plan": {
+    "name": "zones-us-county-baseline-seed-plan-input-plan",
+    "zones": [
+      {
+        "id": "utc-minus-05-00",
+        "utc_offset_minutes": -300
+      },
+      {
+        "id": "utc-minus-06-00",
+        "utc_offset_minutes": -360
+      }
+    ],
+    "assignment": [
+      1,
+      1,
+      0,
+      0
+    ]
+  },
+  "reference_assignment": [
+    1,
+    1,
+    0,
+    0
+  ],
+  "caveats": [
+    "Baseline seed input uses source-derived Census Gazetteer points and 2024 county population estimates for four county-shaped rows.",
+    "Current-law assignment evidence remains placeholder and is not publication-ready.",
+    "RPLAN adjacency remains the Pulse 02 smoke adjacency until TIGER-derived county adjacency lands.",
+    "Representative points are Census internal points and remain exploratory."
+  ]
+}

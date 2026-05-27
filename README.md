@@ -145,6 +145,11 @@ assignment, geometry, and split-county caveats machine-readable.
 RPLAN context, current-law assignment evidence, representative-point fixture, and
 zone catalog. It proves the baseline input assembly path while remaining a smoke
 fixture because legal assignments and point methods are not strong-claim ready.
+`data/plan-inputs/us-county-baseline-seed.json` is the first Pulse 03
+source-derived seed input. It replaces approximate point and population
+placeholders with Census Gazetteer internal points and 2024 county population
+estimates for the four seed units, while still caveating smoke adjacency and
+placeholder legal assignment evidence.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.

@@ -64,6 +64,11 @@ using representative points for a scorecard. Census internal-point rows are
 acceptable for an exploratory baseline only when every row is caveated and
 `strong_claim_point_method_ready` remains false.
 
+The Pulse 03 four-county seed uses Census 2024 Gazetteer internal points and
+2024 county population estimates. These are source-derived scoring inputs, but
+they do not make the seed publishable while adjacency and legal assignments
+remain smoke/placeholder layers.
+
 ## Open Work
 
 - Use an RPLAN-produced county context as the preferred intake artifact when it

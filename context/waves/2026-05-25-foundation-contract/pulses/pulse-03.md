@@ -51,4 +51,16 @@ Pulse 02 proved the shape of the intake path:
 
 ## Status
 
-Ready.
+In progress.
+
+## Pulse log
+
+- Added source-derived four-county seed fixtures from Census public data:
+  `data/rplan-contexts/us-county-seed-rplan-context.json`,
+  `data/representative-points/us-county-seed-gazetteer.json`, and
+  `data/plan-inputs/us-county-baseline-seed.json`.
+- The seed replaces placeholder population weights and approximate coordinates
+  with Census 2024 county population estimates and Census 2024 Gazetteer internal
+  points for the four county-shaped rows.
+- The seed still uses smoke adjacency and placeholder current-law assignments,
+  so it remains blocked from publication.

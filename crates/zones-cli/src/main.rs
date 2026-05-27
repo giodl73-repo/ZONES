@@ -7,13 +7,14 @@ use zones_core::{
     evaluate_zone_plan_input_with_manifest_and_catalog, rplan_context_intake_report, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
-    seed_temporal_dataset, seed_us_county_baseline_smoke_plan_input,
-    seed_us_county_smoke_representative_points, seed_us_county_smoke_rplan_context,
-    seed_us_county_smoke_time_zone_assignments, seed_zone_catalog, zone_plan_source_ref_report,
-    CountyRepresentativePointSet, CountyTimeZoneAssignmentSet, GeometryJoinOptions,
-    ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions, OffsetMapView,
-    SourceGatePolicy, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
-    ZonePlanInput,
+    seed_temporal_dataset, seed_us_county_baseline_seed_plan_input,
+    seed_us_county_baseline_smoke_plan_input, seed_us_county_seed_representative_points,
+    seed_us_county_seed_rplan_context, seed_us_county_smoke_representative_points,
+    seed_us_county_smoke_rplan_context, seed_us_county_smoke_time_zone_assignments,
+    seed_zone_catalog, zone_plan_source_ref_report, CountyRepresentativePointSet,
+    CountyTimeZoneAssignmentSet, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
+    OffsetMapRenderOptions, OffsetMapView, SourceGatePolicy, SourceLimitationMatrix,
+    SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -159,6 +160,7 @@ enum Command {
         source_manifest: PathBuf,
     },
     SeedCountyRplanContext,
+    SeedCountySeedRplanContext,
     RplanContextReport {
         #[arg(default_value = "data/rplan-contexts/us-county-smoke-rplan-context.json")]
         path: PathBuf,
@@ -171,6 +173,7 @@ enum Command {
         source_manifest: PathBuf,
     },
     SeedRepresentativePoints,
+    SeedCountySeedRepresentativePoints,
     RepresentativePointReport {
         #[arg(default_value = "data/representative-points/us-county-smoke-gazetteer.json")]
         path: PathBuf,
@@ -178,6 +181,7 @@ enum Command {
         source_manifest: PathBuf,
     },
     SeedCountyBaselinePlanInput,
+    SeedCountyBaselineSeedPlanInput,
     SeedZoneCatalog,
     ZoneCatalogReport {
         #[arg(default_value = "data/zone-catalogs/seed-offsets.json")]
@@ -462,6 +466,10 @@ fn main() -> Result<()> {
             let context = seed_us_county_smoke_rplan_context();
             println!("{}", serde_json::to_string_pretty(&context)?);
         }
+        Command::SeedCountySeedRplanContext => {
+            let context = seed_us_county_seed_rplan_context();
+            println!("{}", serde_json::to_string_pretty(&context)?);
+        }
         Command::RplanContextReport { path } => {
             let bytes = fs::read(&path)
                 .with_context(|| format!("failed to read RPLAN context {}", path.display()))?;
@@ -505,6 +513,10 @@ fn main() -> Result<()> {
             let points = seed_us_county_smoke_representative_points();
             println!("{}", serde_json::to_string_pretty(&points)?);
         }
+        Command::SeedCountySeedRepresentativePoints => {
+            let points = seed_us_county_seed_representative_points();
+            println!("{}", serde_json::to_string_pretty(&points)?);
+        }
         Command::RepresentativePointReport {
             path,
             source_manifest,
@@ -534,6 +546,10 @@ fn main() -> Result<()> {
         }
         Command::SeedCountyBaselinePlanInput => {
             let input = seed_us_county_baseline_smoke_plan_input();
+            println!("{}", serde_json::to_string_pretty(&input)?);
+        }
+        Command::SeedCountyBaselineSeedPlanInput => {
+            let input = seed_us_county_baseline_seed_plan_input();
             println!("{}", serde_json::to_string_pretty(&input)?);
         }
         Command::SeedZoneCatalog => {

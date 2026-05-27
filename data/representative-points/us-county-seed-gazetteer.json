@@ -1,0 +1,59 @@
+{
+  "point_set_id": "zones-us-county-seed-representative-points",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-27",
+  "records": [
+    {
+      "unit_id": "01001",
+      "point": {
+        "latitude": 32.532237,
+        "longitude": -86.64644,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -346.58576,
+      "caveats": [
+        "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted."
+      ]
+    },
+    {
+      "unit_id": "01003",
+      "point": {
+        "latitude": 30.659218,
+        "longitude": -87.746067,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -350.984268,
+      "caveats": [
+        "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted."
+      ]
+    },
+    {
+      "unit_id": "12001",
+      "point": {
+        "latitude": 29.67574,
+        "longitude": -82.357221,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -329.428884,
+      "caveats": [
+        "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted."
+      ]
+    },
+    {
+      "unit_id": "12003",
+      "point": {
+        "latitude": 30.324442,
+        "longitude": -82.302284,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -329.209136,
+      "caveats": [
+        "Source-derived Census Gazetteer internal point; still exploratory and not population-weighted."
+      ]
+    }
+  ]
+}
