@@ -55,6 +55,7 @@
       "expected_artifact": "Reconciliation table comparing DOT geometry to county units and 49 CFR clauses.",
       "hash_required": true,
       "gate_notes": [
+        "Endpoint metadata is recorded at data/source-endpoints/dot-time-zones-arcgis.json.",
         "Map geometry cannot override 49 CFR text without a documented reconciliation note."
       ]
     },

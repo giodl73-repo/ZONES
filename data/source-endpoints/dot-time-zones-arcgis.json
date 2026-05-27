@@ -1,0 +1,65 @@
+{
+  "endpoint_id": "dot-time-zones-arcgis",
+  "source_id": "dot-time-zone-map-layer",
+  "retrieved_on": "2026-05-27",
+  "publisher": "USDOT Bureau of Transportation Statistics",
+  "item_id": "5cf8b27b6e8d4e809a4414914a09202a",
+  "item_url": "https://www.arcgis.com/sharing/rest/content/items/5cf8b27b6e8d4e809a4414914a09202a?f=json",
+  "hub_url": "https://geodata.bts.gov/datasets/usdot::time-zones/about",
+  "service_url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Time_Zones/FeatureServer",
+  "layer_url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Time_Zones/FeatureServer/0",
+  "query_url": "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Time_Zones/FeatureServer/0/query",
+  "layer_name": "Time Zones",
+  "geometry_type": "esriGeometryPolygon",
+  "spatial_reference_wkid": 4326,
+  "fields": [
+    "fid",
+    "zone",
+    "utc",
+    "Shape__Area",
+    "Shape__Length"
+  ],
+  "zone_rows": [
+    {
+      "zone": "Atlantic",
+      "utc": "-04:00"
+    },
+    {
+      "zone": "Eastern",
+      "utc": "-05:00"
+    },
+    {
+      "zone": "Central",
+      "utc": "-06:00"
+    },
+    {
+      "zone": "Mountain",
+      "utc": "-07:00"
+    },
+    {
+      "zone": "Pacific",
+      "utc": "-08:00"
+    },
+    {
+      "zone": "Alaska",
+      "utc": "-09:00"
+    },
+    {
+      "zone": "Hawaii-Aleutian",
+      "utc": "-10:00"
+    },
+    {
+      "zone": "Samoa",
+      "utc": "-11:00"
+    },
+    {
+      "zone": "Chamorro",
+      "utc": "+10:00"
+    }
+  ],
+  "license_posture": "NTAD dataset is described by BTS as a work of the United States government and available for unrestricted public use.",
+  "caveats": [
+    "Endpoint metadata is committed; raw feature geometry remains an ignored cache input until reconciliation is implemented.",
+    "The dataset description says boundaries are derived from 49 CFR Part 71, but ZONES still treats legal-clause evidence and geometry reconciliation as separate gates."
+  ]
+}

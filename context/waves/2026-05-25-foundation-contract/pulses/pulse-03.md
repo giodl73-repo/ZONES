@@ -74,3 +74,6 @@ In progress.
   and `geometry-reconciliation-report` to track DOT geometry reconciliation as a
   separate publication gate. All four seed rows are currently pending
   reconciliation, so the seed remains blocked from publication.
+- Added `data/source-endpoints/dot-time-zones-arcgis.json` to record the BTS
+  Time Zones ArcGIS FeatureServer endpoint, fields, zone rows, license posture,
+  and raw-cache caveats for the next geometry join.

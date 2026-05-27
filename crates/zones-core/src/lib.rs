@@ -4189,6 +4189,8 @@ pub fn seed_source_gate_policy() -> SourceGatePolicy {
                         .to_string(),
                 hash_required: true,
                 gate_notes: vec![
+                    "Endpoint metadata is recorded at data/source-endpoints/dot-time-zones-arcgis.json."
+                        .to_string(),
                     "Map geometry cannot override 49 CFR text without a documented reconciliation note."
                         .to_string(),
                 ],
@@ -5591,7 +5593,7 @@ mod tests {
         assert_eq!(report.ignored_local_cache_count, 4);
         assert_eq!(report.reference_only_count, 3);
         assert_eq!(report.hash_required_count, 4);
-        assert_eq!(report.gate_note_count, 7);
+        assert_eq!(report.gate_note_count, 8);
         assert!(report.source_gate_ready);
     }
 

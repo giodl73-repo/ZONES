@@ -70,3 +70,10 @@ until county-level DOT geometry reconciliation is complete.
 Run `cargo run -p zones-cli -- geometry-reconciliation-report <reconciliation>`
 to check the DOT geometry gate. `geometry_reconciliation_ready: false` blocks
 publication even when legal clause evidence is present.
+
+The BTS/NTAD ArcGIS feature service for time zones is recorded at
+`data/source-endpoints/dot-time-zones-arcgis.json`. It exposes polygon geometry
+with `zone` and `utc` fields at
+`https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Time_Zones/FeatureServer/0`.
+Only endpoint metadata is committed; raw geometry belongs in ignored cache until
+the geometry reconciliation step is implemented.

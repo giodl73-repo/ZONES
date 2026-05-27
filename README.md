@@ -158,6 +158,9 @@ still pending.
 `data/geometry-reconciliation/us-county-seed-dot-reconciliation.json` tracks DOT
 geometry reconciliation as a separate publication gate; the seed remains blocked
 while rows are pending.
+`data/source-endpoints/dot-time-zones-arcgis.json` records the BTS/NTAD Time
+Zones ArcGIS FeatureServer endpoint and query shape for the next reconciliation
+step without committing raw geometry.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.
