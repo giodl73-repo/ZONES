@@ -1,0 +1,23 @@
+{
+  "endpoint_id": "census-tigerweb-counties",
+  "source_id": "census-tiger-counties-2024",
+  "retrieved_on": "2026-05-27",
+  "publisher": "U.S. Census Bureau",
+  "service_url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer",
+  "layer_url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1",
+  "query_url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query",
+  "fixture_query": {
+    "where": "GEOID in ('01001','01003','12001','12003')",
+    "outFields": "GEOID,NAME",
+    "f": "geojson",
+    "outSR": 4326,
+    "geometryPrecision": 4,
+    "maxAllowableOffset": 0.005
+  },
+  "fixture_path": "data/boundaries/us-county-seed-boundaries.geojson",
+  "license_posture": "Census TIGERweb county geometry is a U.S. Census Bureau public data endpoint; this repo commits only a four-county generalized fixture.",
+  "caveats": [
+    "Fixture geometry is generalized for local candidate-map inspection and should not be used as a raw national GIS cache.",
+    "County boundaries are administrative geometry, not legal time-zone assignment evidence."
+  ]
+}

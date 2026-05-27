@@ -6043,6 +6043,34 @@ mod tests {
     }
 
     #[test]
+    fn committed_county_seed_boundaries_match_seed_plan_units() {
+        let input: ZonePlanInput = serde_json::from_str(include_str!(
+            "../../../data/plan-inputs/us-county-baseline-seed.json"
+        ))
+        .unwrap();
+        let geojson = include_str!("../../../data/boundaries/us-county-seed-boundaries.geojson");
+        let report =
+            attach_geojson_geometries(&input, geojson, &GeometryJoinOptions::default()).unwrap();
+        let offset_fit = evaluate_offset_fit(&report.input, 60).unwrap();
+        let svg = render_offset_fit_svg(
+            &offset_fit,
+            OffsetMapView::CurrentStandard,
+            &OffsetMapRenderOptions::default(),
+        );
+
+        assert_eq!(report.matched_unit_count, 4);
+        assert!(report.unmatched_unit_ids.is_empty());
+        assert!(report.unused_feature_unit_ids.is_empty());
+        assert!(report
+            .input
+            .units
+            .iter()
+            .all(|unit| matches!(unit.map_geometry, Some(MapGeometry::Polygon(_)))));
+        assert!(svg.contains("<path"));
+        assert!(svg.contains("fill-rule=\"evenodd\""));
+    }
+
+    #[test]
     fn county_smoke_source_ref_report_counts_intake_coverage() {
         let input: ZonePlanInput = serde_json::from_str(include_str!(
             "../../../data/plan-inputs/us-county-smoke.json"

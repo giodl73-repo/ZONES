@@ -46,6 +46,7 @@ counties and the representative-point method is exploratory.
 - `cargo run -p zones-cli -- geometry-reconciliation-report`
 - `cargo run -p zones-cli -- compare-offset-candidates data/plan-inputs/us-county-baseline-seed.json --output target/zones/us-county-baseline-seed/candidate-comparison.json`
 - `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --output-dir target/zones/us-county-baseline-seed/candidate-maps`
+- `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --geojson data/boundaries/us-county-seed-boundaries.geojson --require-all-units --output-dir target/zones/us-county-baseline-seed/candidate-boundary-maps`
 - `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/seed-plan.json --geojson data/boundaries/seed-boundaries.geojson --require-all-units --output-dir target/zones/seed-boundary-candidate-maps`
 - `git diff --check`
 
@@ -74,3 +75,7 @@ In progress.
   the option-map packet geometry-backed for fixtures with committed boundaries
   while the US county seed remains gated by source-derived county boundary
   availability.
+- Added a small generalized Census TIGERweb county-boundary fixture for the four
+  source-derived seed GEOIDs, so the seed candidate packet can be generated with
+  boundary-backed SVG/GeoJSON maps while raw national GIS cache data stays out of
+  git.
