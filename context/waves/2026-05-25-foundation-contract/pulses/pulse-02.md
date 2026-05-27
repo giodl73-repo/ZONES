@@ -40,6 +40,7 @@ fixture-level until a county source intake can produce auditable inputs.
 - `cargo run -p zones-cli -- source-report`
 - `cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json`
 - `cargo run -p zones-cli -- source-gate-report`
+- `cargo run -p zones-cli -- rplan-context-report`
 - `cargo run -p zones-cli -- offset-fit`
 - `cargo run -p zones-cli -- write-offset-candidate-plan`
 - `git diff --check`
@@ -67,3 +68,6 @@ In progress.
   `source-gate-report` so every source has acquisition mode, cache posture,
   rights posture, expected artifact, hash requirement, and gate notes before
   broad ingestion.
+- Added `data/rplan-contexts/us-county-smoke-rplan-context.json` and
+  `rplan-context-report` to pin the RPLAN county context target shape before a
+  national county graph is generated.

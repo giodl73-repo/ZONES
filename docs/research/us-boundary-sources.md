@@ -43,6 +43,11 @@ boundary, representative point, population, legal assignment, and time-zone
 geometry, plus caveats for unresolved split-county status. Treat
 `publishable_source_ref_coverage: false` as a blocker for publication.
 
+Run `cargo run -p zones-cli -- rplan-context-report <rplan-context>` for county
+boundary context intake. Baseline contexts should be GEOID-sorted county units
+with graph adjacency, population coverage, geometry source context, source hash
+entries, and a matching context hash.
+
 ## Representative Point Levels
 
 ZONES should support at least four representative-point methods:

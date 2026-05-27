@@ -48,6 +48,7 @@ cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
+cargo run -p zones-cli -- rplan-context-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report
@@ -94,6 +95,10 @@ metadata, population, and representative-point claims.
 policy for the US baseline: acquisition mode, cache posture, rights posture,
 expected artifact, hash requirement, and gate notes for every source in the US
 foundation manifest.
+`data/rplan-contexts/us-county-smoke-rplan-context.json` is the first committed
+RPLAN county-context smoke fixture. It proves the target shape for GEOID-sorted
+county units, adjacency, populations, geometry source context, source hashes, and
+context-hash validation before a national county context is generated.
 `data/module-boundaries/zones-rplan-rline.json` records which responsibilities
 belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 

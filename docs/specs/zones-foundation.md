@@ -181,6 +181,9 @@ The source inventory pulse must classify each source before ingestion:
 BISECT's Census/TIGER/GEOID conventions are the first reference point for US
 county boundaries. Reusable boundary payloads should be expressed as RPLAN
 contexts or future RPLAN packages.
+`rplan-context-report` validates the committed RPLAN context shape, confirms the
+context hash, counts county units and graph edges, verifies population coverage,
+and reports whether the context is ready for ZONES scoring.
 
 ## Research Requirements
 
@@ -222,6 +225,7 @@ cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
+cargo run -p zones-cli -- rplan-context-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report

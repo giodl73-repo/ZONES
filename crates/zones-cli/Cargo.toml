@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+rplan-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 zones-core.workspace = true

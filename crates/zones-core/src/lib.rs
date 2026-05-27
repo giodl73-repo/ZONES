@@ -1,5 +1,8 @@
 use rgraph_core::{assignment_label_connected, undirected_edge_cut, EdgeCutError};
-use rplan_core::RplanContext;
+use rplan_core::{
+    CanonicalOrder, EdgeKind, EdgeSemantics, GeometryContext, PlanUnitIndex, RplanContext,
+    SourceHashes, UnitEdge, UnitGraph, UnitKind, RCTX_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -115,6 +118,23 @@ pub struct SourceGateReport {
     pub hash_required_count: usize,
     pub gate_note_count: usize,
     pub source_gate_ready: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RplanContextIntakeReport {
+    pub context_hash: String,
+    pub computed_context_hash: String,
+    pub context_hash_matches: bool,
+    pub unit_kind: String,
+    pub canonical_order: String,
+    pub unit_count: usize,
+    pub has_graph: bool,
+    pub graph_edge_count: usize,
+    pub has_populations: bool,
+    pub population_count: usize,
+    pub has_geometry_context: bool,
+    pub source_hash_count: usize,
+    pub rplan_context_ready: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -2771,6 +2791,133 @@ pub fn evaluate_rplan_zone_context(
     evaluate_zone_plan(&units, &adjacency, plan)
 }
 
+pub fn rplan_context_intake_report(
+    context: &RplanContext,
+) -> Result<RplanContextIntakeReport, ZonePlanError> {
+    context
+        .validate()
+        .map_err(|err| ZonePlanError::RplanContext(err.to_string()))?;
+    let computed_context_hash = context
+        .compute_context_hash()
+        .map_err(|err| ZonePlanError::RplanContext(err.to_string()))?;
+    let graph_edge_count = context
+        .graph
+        .as_ref()
+        .map(|graph| graph.adjacency.iter().map(Vec::len).sum::<usize>() / 2)
+        .unwrap_or(0);
+    let population_count = context
+        .populations
+        .as_ref()
+        .map(Vec::len)
+        .unwrap_or_default();
+    let context_hash_matches = context.context_hash == computed_context_hash;
+    let rplan_context_ready = context_hash_matches
+        && context.graph.is_some()
+        && context.populations.is_some()
+        && population_count == context.units.unit_ids.len()
+        && !context.source_hashes.entries.is_empty();
+
+    Ok(RplanContextIntakeReport {
+        context_hash: context.context_hash.clone(),
+        computed_context_hash,
+        context_hash_matches,
+        unit_kind: format!("{:?}", context.units.unit_kind),
+        canonical_order: format!("{:?}", context.units.canonical_order),
+        unit_count: context.units.unit_ids.len(),
+        has_graph: context.graph.is_some(),
+        graph_edge_count,
+        has_populations: context.populations.is_some(),
+        population_count,
+        has_geometry_context: context.geometry.is_some(),
+        source_hash_count: context.source_hashes.entries.len(),
+        rplan_context_ready,
+    })
+}
+
+pub fn seed_us_county_smoke_rplan_context() -> RplanContext {
+    let mut units = PlanUnitIndex {
+        unit_kind: UnitKind::County,
+        state: None,
+        year: Some(2024),
+        canonical_order: CanonicalOrder::SortedGeoid,
+        unit_ids: vec![
+            "01001".to_string(),
+            "01003".to_string(),
+            "12001".to_string(),
+            "12003".to_string(),
+        ],
+        unit_universe_hash: String::new(),
+        source_id: Some("census-tiger-counties-2024".to_string()),
+    };
+    units.unit_universe_hash = units.compute_unit_universe_hash().unwrap();
+
+    let mut source_hashes = SourceHashes::default();
+    source_hashes.entries.insert(
+        "census-tiger-counties-2024".to_string(),
+        "sha256:source-gate-required-before-national-ingest".to_string(),
+    );
+    source_hashes.entries.insert(
+        "census-county-population-estimates-2024".to_string(),
+        "sha256:source-gate-required-before-national-ingest".to_string(),
+    );
+
+    let mut context = RplanContext {
+        rctx_version: RCTX_VERSION.to_string(),
+        context_hash: String::new(),
+        units,
+        graph: Some(UnitGraph {
+            edge_semantics: EdgeSemantics::Undirected,
+            adjacency: vec![
+                vec![UnitEdge {
+                    to: 1,
+                    kind: EdgeKind::Boundary,
+                    weight: Some(1.0),
+                }],
+                vec![
+                    UnitEdge {
+                        to: 0,
+                        kind: EdgeKind::Boundary,
+                        weight: Some(1.0),
+                    },
+                    UnitEdge {
+                        to: 2,
+                        kind: EdgeKind::Boundary,
+                        weight: Some(1.0),
+                    },
+                ],
+                vec![
+                    UnitEdge {
+                        to: 1,
+                        kind: EdgeKind::Boundary,
+                        weight: Some(1.0),
+                    },
+                    UnitEdge {
+                        to: 3,
+                        kind: EdgeKind::Boundary,
+                        weight: Some(1.0),
+                    },
+                ],
+                vec![UnitEdge {
+                    to: 2,
+                    kind: EdgeKind::Boundary,
+                    weight: Some(1.0),
+                }],
+            ],
+        }),
+        populations: Some(vec![1, 1, 1, 1]),
+        subdivisions: None,
+        demographics: None,
+        geometry: Some(GeometryContext {
+            source_id: Some("census-tiger-counties-2024".to_string()),
+            crs: Some("EPSG:4269".to_string()),
+            unit_geometry_hashes: None,
+        }),
+        source_hashes,
+    };
+    context.context_hash = context.compute_context_hash().unwrap();
+    context
+}
+
 fn validate_inputs(
     units: &[BoundaryUnit],
     adjacency: &[Vec<usize>],
@@ -4266,6 +4413,21 @@ mod tests {
         assert_eq!(report.boundary_edges, 2);
         assert!(report.all_zones_connected);
         assert_eq!(report.unit_count, 4);
+    }
+
+    #[test]
+    fn committed_county_smoke_rplan_context_matches_seed_context() {
+        let context: RplanContext = serde_json::from_str(include_str!(
+            "../../../data/rplan-contexts/us-county-smoke-rplan-context.json"
+        ))
+        .unwrap();
+
+        assert_eq!(context, seed_us_county_smoke_rplan_context());
+        let report = rplan_context_intake_report(&context).unwrap();
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.graph_edge_count, 3);
+        assert!(report.context_hash_matches);
+        assert!(report.rplan_context_ready);
     }
 
     #[test]
