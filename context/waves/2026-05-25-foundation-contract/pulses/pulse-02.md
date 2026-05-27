@@ -14,12 +14,13 @@ fixture-level until a county source intake can produce auditable inputs.
 
 ## Scope
 
-- Select the first county source path: Census TIGER/Line or an RPLAN-produced
-  county context, plus the source manifest fields needed to cite it.
-- Define how current legal time-zone assignments will be represented at county
-  level, including split-county caveats.
-- Add or document a small county smoke fixture that uses real GEOID-shaped ids
-  without committing raw national GIS cache bytes.
+- Select the first county source path: prefer an RPLAN-produced county context
+  backed by Census TIGER/Line and Gazetteer sources, with ZONES retaining the
+  time-zone assignment and scoring fields.
+- Define current legal time-zone assignments as county-level records that cite
+  49 CFR Part 71 and/or reconciled DOT map evidence, with split-county caveats.
+- Add a small county smoke fixture that uses GEOID-shaped ids without committing
+  raw national GIS cache bytes.
 - Keep ZONES policy fields in ZONES; keep portable boundary graph/context shape
   aligned with RPLAN.
 
@@ -43,4 +44,12 @@ fixture-level until a county source intake can produce auditable inputs.
 
 ## Status
 
-Ready.
+In progress.
+
+## Pulse log
+
+- Added `data/plan-inputs/us-county-smoke.json` as the first county-shaped
+  evaluator input. It intentionally uses GEOID-shaped ids, placeholder weights,
+  and explicit caveats rather than claiming source-derived legal assignments.
+- Extended the US foundation source manifest with the selected Census population
+  source and DOT geospatial map layer needed by county intake.

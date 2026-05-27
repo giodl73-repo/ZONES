@@ -46,9 +46,12 @@ ZONES should support at least four representative-point methods:
 
 ## Open Work
 
-- Build a reproducible county RPLAN context from TIGER/Line or RPLAN fixtures.
-- Decide whether county adjacency comes from a shared RPLAN artifact or a
-  ZONES-specific boundary graph build.
-- Add source manifests with file hashes before committing derived score tables.
+- Use an RPLAN-produced county context as the preferred intake artifact when it
+  is available; otherwise build a ZONES smoke fixture directly from documented
+  Census fields and keep it clearly caveated.
+- Reconcile county adjacency from the RPLAN artifact with any ZONES-specific
+  boundary graph smoke fixtures before publishing scores.
+- Add source manifests with file hashes before committing derived national score
+  tables.
 - Identify counties where current legal time-zone boundaries split the county or
   conflict with a county-level simplification.

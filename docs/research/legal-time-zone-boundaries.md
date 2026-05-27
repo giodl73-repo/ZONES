@@ -46,7 +46,9 @@ county-level score should expose an uncertainty flag when:
 
 ## Open Work
 
-- Inventory 49 CFR part 71 text into machine-readable boundary clauses.
-- Compare DOT geospatial map outputs with county-level assignments.
+- Inventory 49 CFR part 71 text into machine-readable boundary clauses that can
+  cite the source clause for each county-level assignment.
+- Compare DOT geospatial map outputs with county-level assignments and mark
+  split or uncertain counties before they feed score tables.
 - Create a split-county review table before publishing top-deviation rankings.
 - Select Federal Register proceedings for the D.0 convenience-of-commerce paper.

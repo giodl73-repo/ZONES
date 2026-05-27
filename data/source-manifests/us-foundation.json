@@ -25,6 +25,17 @@
       ]
     },
     {
+      "source_id": "census-county-population-estimates-2024",
+      "title": "County Population Totals and Components of Change: 2020-2024",
+      "kind": "population",
+      "url": "https://www.census.gov/programs-surveys/popest/data/tables.html",
+      "retrieved_on": "2026-05-26",
+      "vintage": "2024",
+      "caveats": [
+        "Population source selected for county weighting; smoke fixtures may use tiny placeholder weights until source-derived rows are generated."
+      ]
+    },
+    {
       "source_id": "dot-49-cfr-71",
       "title": "49 CFR Part 71",
       "kind": "legal-text",
@@ -32,6 +43,16 @@
       "retrieved_on": "2026-05-26",
       "caveats": [
         "Legal text must be converted to geospatial assignments before county scoring."
+      ]
+    },
+    {
+      "source_id": "dot-time-zone-map-layer",
+      "title": "DOT Time Zones Geospatial Map",
+      "kind": "geospatial-boundary",
+      "url": "https://www.transportation.gov/regulations/time-act",
+      "retrieved_on": "2026-05-26",
+      "caveats": [
+        "Map layer must be reconciled with 49 CFR Part 71 and county boundaries before county-level assignments are treated as evidence."
       ]
     },
     {

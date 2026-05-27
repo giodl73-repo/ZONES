@@ -2691,6 +2691,18 @@ pub fn seed_source_manifest() -> SourceManifest {
                 caveats: vec!["Internal points are exploratory and not population-weighted.".to_string()],
             },
             SourceCitation {
+                source_id: "census-county-population-estimates-2024".to_string(),
+                title: "County Population Totals and Components of Change: 2020-2024".to_string(),
+                kind: SourceKind::Population,
+                url: "https://www.census.gov/programs-surveys/popest/data/tables.html".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: Some("2024".to_string()),
+                content_hash: None,
+                caveats: vec![
+                    "Population source selected for county weighting; smoke fixtures may use tiny placeholder weights until source-derived rows are generated.".to_string(),
+                ],
+            },
+            SourceCitation {
                 source_id: "dot-49-cfr-71".to_string(),
                 title: "49 CFR Part 71".to_string(),
                 kind: SourceKind::LegalText,
@@ -2699,6 +2711,18 @@ pub fn seed_source_manifest() -> SourceManifest {
                 vintage: None,
                 content_hash: None,
                 caveats: vec!["Legal text must be converted to geospatial assignments before county scoring.".to_string()],
+            },
+            SourceCitation {
+                source_id: "dot-time-zone-map-layer".to_string(),
+                title: "DOT Time Zones Geospatial Map".to_string(),
+                kind: SourceKind::GeospatialBoundary,
+                url: "https://www.transportation.gov/regulations/time-act".to_string(),
+                retrieved_on: "2026-05-26".to_string(),
+                vintage: None,
+                content_hash: None,
+                caveats: vec![
+                    "Map layer must be reconciled with 49 CFR Part 71 and county boundaries before county-level assignments are treated as evidence.".to_string(),
+                ],
             },
             SourceCitation {
                 source_id: "dot-time-zone-procedure".to_string(),
@@ -3302,7 +3326,7 @@ mod tests {
         assert_eq!(evaluation.unit_scores[1].moved_from_reference, Some(false));
         assert_eq!(evaluation.unit_scores[1].absolute_error_minutes, 15.0);
         assert_eq!(evaluation.input_caveats.len(), 1);
-        assert_eq!(evaluation.source_caveats.len(), 5);
+        assert_eq!(evaluation.source_caveats.len(), 7);
     }
 
     #[test]
@@ -3923,11 +3947,12 @@ mod tests {
         let report = seed_source_manifest().report().unwrap();
 
         assert_eq!(report.manifest_id, "zones-us-foundation-sources");
-        assert_eq!(report.source_count, 5);
-        assert_eq!(report.caveated_source_count, 5);
+        assert_eq!(report.source_count, 7);
+        assert_eq!(report.caveated_source_count, 7);
         assert_eq!(report.legal_text_count, 2);
-        assert_eq!(report.geospatial_boundary_count, 1);
+        assert_eq!(report.geospatial_boundary_count, 2);
         assert_eq!(report.time_rule_database_count, 1);
+        assert_eq!(report.population_count, 1);
         assert_eq!(report.representative_point_count, 1);
     }
 
@@ -4039,6 +4064,26 @@ mod tests {
 
         assert_eq!(manifest, seed_source_manifest());
         assert!(manifest.report().is_ok());
+    }
+
+    #[test]
+    fn committed_us_county_smoke_plan_scores_with_manifest_and_catalog() {
+        let input: ZonePlanInput = serde_json::from_str(include_str!(
+            "../../../data/plan-inputs/us-county-smoke.json"
+        ))
+        .unwrap();
+
+        let report = evaluate_zone_plan_input_with_manifest_and_catalog(
+            &input,
+            &seed_source_manifest(),
+            &seed_zone_catalog(),
+        )
+        .unwrap();
+
+        assert_eq!(input.input_id, "zones-us-county-smoke-plan-input");
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.zone_count, 2);
+        assert!(report.all_zones_connected);
     }
 
     #[test]

@@ -56,6 +56,7 @@ cargo run -p zones-cli -- write-offset-maps
 cargo run -p zones-cli -- write-offset-atlas
 cargo run -p zones-cli -- write-offset-geojson
 cargo run -p zones-cli -- write-offset-candidate-plan
+cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-smoke.json
 ```
 
 The seed report runs a tiny four-county fixture through the first plan evaluator.
@@ -112,6 +113,9 @@ by unit id, which lets county/state boundary exports from BISECT or RPLAN feed
 the same offset-fit reports and maps.
 `data/plan-inputs/seed-plan-map-points.json` is the seed fixture for
 coordinate-aware map rendering.
+`data/plan-inputs/us-county-smoke.json` is the first county-shaped intake smoke
+fixture. It uses GEOID-shaped ids and explicit caveats to prove the evaluator
+contract without claiming a source-derived national county scorecard.
 
 ## Non-goals
 
