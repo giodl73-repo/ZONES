@@ -83,3 +83,7 @@ In progress.
 - Added `data/plan-inputs/us-county-baseline-smoke.json` to prove baseline plan
   input assembly from the RPLAN context, assignment evidence, representative
   points, and zone catalog.
+- Generated the baseline smoke scorecard artifact family under ignored
+  `target/zones/us-county-baseline-smoke/`: detailed evaluation JSON, unit and
+  zone CSVs, offset-fit JSON/CSV, GeoJSON, maps, atlas, and offset candidate
+  plan. These are measurement artifacts only and not publication outputs.

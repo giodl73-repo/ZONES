@@ -148,6 +148,16 @@ fixture because legal assignments and point methods are not strong-claim ready.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.
+The baseline smoke scorecard can be generated under ignored output paths with:
+
+```powershell
+cargo run -p zones-cli -- write-evaluation data/plan-inputs/us-county-baseline-smoke.json --output target/zones/us-county-baseline-smoke/evaluation.json --unit-scores-csv target/zones/us-county-baseline-smoke/unit-scores.csv --zone-summaries-csv target/zones/us-county-baseline-smoke/zone-summaries.csv
+cargo run -p zones-cli -- write-offset-fit data/plan-inputs/us-county-baseline-smoke.json --output target/zones/us-county-baseline-smoke/offset-fit.json --unit-scores-csv target/zones/us-county-baseline-smoke/offset-fit-units.csv
+cargo run -p zones-cli -- write-offset-geojson data/plan-inputs/us-county-baseline-smoke.json --output target/zones/us-county-baseline-smoke/offset-fit.geojson
+cargo run -p zones-cli -- write-offset-maps data/plan-inputs/us-county-baseline-smoke.json --output-dir target/zones/us-county-baseline-smoke/maps
+cargo run -p zones-cli -- write-offset-atlas data/plan-inputs/us-county-baseline-smoke.json --output-dir target/zones/us-county-baseline-smoke/atlas
+cargo run -p zones-cli -- write-offset-candidate-plan data/plan-inputs/us-county-baseline-smoke.json --output target/zones/us-county-baseline-smoke/offset-candidate-plan.json
+```
 
 ## Non-goals
 
