@@ -1849,6 +1849,31 @@ pub struct ZonePlanEvaluation {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CandidateComparisonRow {
+    pub candidate_id: String,
+    pub label: String,
+    pub kind: ZoneScenarioKind,
+    pub plan_report: ZonePlanReport,
+    pub weighted_error_delta_minutes: f64,
+    pub max_error_delta_minutes: f64,
+    pub moved_unit_count: usize,
+    pub moved_population: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CandidateComparisonReport {
+    pub input_id: String,
+    pub source_manifest_id: String,
+    pub baseline: ZonePlanReport,
+    pub candidates: Vec<CandidateComparisonRow>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+    pub recommendation_gate_closed: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OffsetFitUnitScore {
     pub unit_id: String,
     pub unit_name: String,
@@ -2536,6 +2561,62 @@ pub fn build_offset_candidate_plan(
     ));
     evaluate_zone_plan_input(&candidate)?;
     Ok(candidate)
+}
+
+pub fn compare_offset_candidate_plans(
+    input: &ZonePlanInput,
+    grids: &[OffsetCandidateGrid],
+) -> Result<CandidateComparisonReport, ZonePlanError> {
+    let baseline = evaluate_zone_plan_input(input)?;
+    let mut candidates = Vec::new();
+    for &grid in grids {
+        let candidate = build_offset_candidate_plan(input, grid)?;
+        let report = evaluate_zone_plan_input(&candidate)?;
+        let (moved_unit_count, moved_population) = moved_from_baseline_zone_ids(input, &candidate);
+        candidates.push(CandidateComparisonRow {
+            candidate_id: candidate.input_id,
+            label: candidate.scenario.label,
+            kind: candidate.scenario.kind,
+            weighted_error_delta_minutes: report.weighted_mean_absolute_error_minutes
+                - baseline.weighted_mean_absolute_error_minutes,
+            max_error_delta_minutes: report.max_absolute_error_minutes
+                - baseline.max_absolute_error_minutes,
+            moved_unit_count,
+            moved_population,
+            caveats: candidate.caveats,
+            plan_report: report,
+        });
+    }
+
+    Ok(CandidateComparisonReport {
+        input_id: input.input_id.clone(),
+        source_manifest_id: input.source_manifest_id.clone(),
+        baseline,
+        candidates,
+        caveats: vec![
+            "Analytic counterfactual comparison only; not a recommendation.".to_string(),
+            "Seed scope is four counties and is not a national baseline.".to_string(),
+            "Representative points are Census internal points and remain exploratory.".to_string(),
+        ],
+        recommendation_gate_closed: true,
+    })
+}
+
+fn moved_from_baseline_zone_ids(
+    baseline: &ZonePlanInput,
+    candidate: &ZonePlanInput,
+) -> (usize, u64) {
+    let mut moved_unit_count = 0;
+    let mut moved_population = 0;
+    for (unit_index, unit) in baseline.units.iter().enumerate() {
+        let baseline_zone_id = &baseline.plan.zones[baseline.plan.assignment[unit_index]].id;
+        let candidate_zone_id = &candidate.plan.zones[candidate.plan.assignment[unit_index]].id;
+        if baseline_zone_id != candidate_zone_id {
+            moved_unit_count += 1;
+            moved_population += unit.population;
+        }
+    }
+    (moved_unit_count, moved_population)
 }
 
 pub fn render_offset_fit_svg(
@@ -5043,6 +5124,29 @@ mod tests {
             .caveats
             .iter()
             .any(|caveat| caveat.contains("nearest quarter-hour UTC offsets")));
+    }
+
+    #[test]
+    fn offset_candidate_comparison_reports_tradeoffs() {
+        let report = compare_offset_candidate_plans(
+            &seed_us_county_baseline_seed_plan_input(),
+            &[
+                OffsetCandidateGrid::WholeHour,
+                OffsetCandidateGrid::HalfHour,
+                OffsetCandidateGrid::QuarterHour,
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(report.candidates.len(), 3);
+        assert!(report.recommendation_gate_closed);
+        assert_eq!(
+            report.candidates[0].kind,
+            ZoneScenarioKind::AnalyticCounterfactual
+        );
+        assert_eq!(report.candidates[0].moved_population, 0);
+        assert!(report.candidates[1].moved_population > 0);
+        assert!(report.candidates[2].weighted_error_delta_minutes < 0.0);
     }
 
     #[test]

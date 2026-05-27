@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use std::{fs, path::PathBuf};
 use zones_core::{
-    attach_geojson_geometries, build_offset_candidate_plan, evaluate_offset_fit,
-    evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
+    attach_geojson_geometries, build_offset_candidate_plan, compare_offset_candidate_plans,
+    evaluate_offset_fit, evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
     evaluate_zone_plan_input_with_manifest_and_catalog, rplan_context_intake_report, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
@@ -112,6 +112,12 @@ enum Command {
         #[arg(long, value_enum, default_value_t = CandidateGridArg::HalfHour)]
         grid: CandidateGridArg,
         #[arg(long, default_value = "target/zones/offset-candidate-plan.json")]
+        output: PathBuf,
+    },
+    CompareOffsetCandidates {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "target/zones/offset-candidate-comparison.json")]
         output: PathBuf,
     },
     AttachGeojsonGeometries {
@@ -367,6 +373,22 @@ fn main() -> Result<()> {
                 .with_context(|| format!("failed to parse {}", path.display()))?;
             let candidate = build_offset_candidate_plan(&input, grid.into())?;
             write_json(&output, &candidate)?;
+            println!("{}", output.display());
+        }
+        Command::CompareOffsetCandidates { path, output } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let report = compare_offset_candidate_plans(
+                &input,
+                &[
+                    OffsetCandidateGrid::WholeHour,
+                    OffsetCandidateGrid::HalfHour,
+                    OffsetCandidateGrid::QuarterHour,
+                ],
+            )?;
+            write_json(&output, &report)?;
             println!("{}", output.display());
         }
         Command::AttachGeojsonGeometries {

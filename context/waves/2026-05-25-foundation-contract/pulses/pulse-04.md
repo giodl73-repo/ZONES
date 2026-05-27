@@ -44,8 +44,21 @@ counties and the representative-point method is exploratory.
 - `cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-seed.json`
 - `cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-baseline-seed.json`
 - `cargo run -p zones-cli -- geometry-reconciliation-report`
+- `cargo run -p zones-cli -- compare-offset-candidates data/plan-inputs/us-county-baseline-seed.json --output target/zones/us-county-baseline-seed/candidate-comparison.json`
 - `git diff --check`
 
 ## Status
 
-Ready.
+In progress.
+
+## Pulse log
+
+- Added `compare-offset-candidates`, which compares the current seed assignment
+  against nearest whole-hour, half-hour, and quarter-hour analytic
+  counterfactuals.
+- The comparison report is written under ignored
+  `target/zones/us-county-baseline-seed/candidate-comparison.json`.
+- Moved-unit and moved-population counts compare zone ids, not internal zone
+  indexes, so equivalent whole-hour assignments do not count as moved.
+- The report keeps `recommendation_gate_closed: true`; lower error deltas are
+  measurements, not recommendations.

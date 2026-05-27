@@ -62,6 +62,7 @@ cargo run -p zones-cli -- write-offset-maps
 cargo run -p zones-cli -- write-offset-atlas
 cargo run -p zones-cli -- write-offset-geojson
 cargo run -p zones-cli -- write-offset-candidate-plan
+cargo run -p zones-cli -- compare-offset-candidates
 cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-smoke.json
 cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-smoke.json
 cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json
@@ -164,6 +165,9 @@ step without committing raw geometry.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.
+`compare-offset-candidates` writes a candidate comparison report for nearest
+whole-hour, half-hour, and quarter-hour offset grids. It reports score deltas,
+moved units/population by zone id, caveats, and `recommendation_gate_closed`.
 The baseline smoke scorecard can be generated under ignored output paths with:
 
 ```powershell
