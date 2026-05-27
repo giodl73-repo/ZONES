@@ -6,10 +6,11 @@ use zones_core::{
     evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
     evaluate_zone_plan_input_with_manifest_and_catalog, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
-    seed_source_limitation_matrix, seed_source_manifest, seed_temporal_dataset, seed_zone_catalog,
-    zone_plan_source_ref_report, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
-    OffsetMapRenderOptions, OffsetMapView, SourceLimitationMatrix, SourceManifest, TemporalDataset,
-    ZoneCatalog, ZonePlanInput,
+    seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
+    seed_temporal_dataset, seed_zone_catalog, zone_plan_source_ref_report, GeometryJoinOptions,
+    ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions, OffsetMapView,
+    SourceGatePolicy, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
+    ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -143,6 +144,13 @@ enum Command {
     },
     SourceRefReport {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
+        source_manifest: PathBuf,
+    },
+    SeedSourceGate,
+    SourceGateReport {
+        #[arg(default_value = "data/source-gates/us-foundation-source-gate.json")]
         path: PathBuf,
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
@@ -395,6 +403,36 @@ fn main() -> Result<()> {
         } => {
             let (input, manifest) = read_plan_and_manifest(&path, &source_manifest)?;
             let report = zone_plan_source_ref_report(&input, &manifest)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedSourceGate => {
+            let policy = seed_source_gate_policy();
+            println!("{}", serde_json::to_string_pretty(&policy)?);
+        }
+        Command::SourceGateReport {
+            path,
+            source_manifest,
+        } => {
+            let policy_bytes = fs::read(&path)
+                .with_context(|| format!("failed to read source gate policy {}", path.display()))?;
+            let policy: SourceGatePolicy =
+                serde_json::from_slice(&policy_bytes).with_context(|| {
+                    format!("failed to parse source gate policy {}", path.display())
+                })?;
+            let source_bytes = fs::read(&source_manifest).with_context(|| {
+                format!(
+                    "failed to read source manifest {}",
+                    source_manifest.display()
+                )
+            })?;
+            let manifest: SourceManifest =
+                serde_json::from_slice(&source_bytes).with_context(|| {
+                    format!(
+                        "failed to parse source manifest {}",
+                        source_manifest.display()
+                    )
+                })?;
+            let report = policy.report(&manifest)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::SeedZoneCatalog => {

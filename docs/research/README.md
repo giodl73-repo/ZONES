@@ -21,7 +21,9 @@ assumptions, and scoring choices.
 - Use DOT, NIST, Congress.gov, Census, Federal Register, or equivalent primary
   sources first.
 - Record retrieval date for legal or regulatory sources.
-- Do not cache raw GIS/source data until the source policy is explicit.
+- Do not cache raw GIS/source data until the source policy is explicit. For the
+  US baseline, `data/source-gates/us-foundation-source-gate.json` is the
+  machine-readable source policy and `source-gate-report` is the readiness check.
 - Do not treat active legislation as current law.
 - Do not treat IANA tzdb as a complete legal-boundary source without documenting
   what it does and does not encode.

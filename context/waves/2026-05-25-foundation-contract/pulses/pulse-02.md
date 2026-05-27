@@ -39,6 +39,7 @@ fixture-level until a county source intake can produce auditable inputs.
 - `cargo run -p zones-cli -- evaluate-plan-detail`
 - `cargo run -p zones-cli -- source-report`
 - `cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json`
+- `cargo run -p zones-cli -- source-gate-report`
 - `cargo run -p zones-cli -- offset-fit`
 - `cargo run -p zones-cli -- write-offset-candidate-plan`
 - `git diff --check`
@@ -62,3 +63,7 @@ In progress.
   publishable scorecard.
 - Added missing-reference counts and `publishable_source_ref_coverage` to make
   source-reference QA usable as a pre-publication gate.
+- Added `data/source-gates/us-foundation-source-gate.json` and
+  `source-gate-report` so every source has acquisition mode, cache posture,
+  rights posture, expected artifact, hash requirement, and gate notes before
+  broad ingestion.

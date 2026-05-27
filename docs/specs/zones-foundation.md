@@ -114,6 +114,11 @@ plan file whose manifest identity does not match the supplied manifest.
 `source-ref-report` summarizes per-unit source-reference coverage, missing
 reference counts, and caveat counts before a county-shaped input is treated as
 publishable evidence.
+`source-gate-report` compares the US source manifest with a source-gate policy
+that names acquisition mode, cache policy, rights posture, expected artifact,
+hash requirement, and gate notes for each source. The source gate is ready only
+when every manifest source is covered and at least one source-derived artifact
+requires hashing.
 Current-law and historical-law scenarios must reference an authority source in
 the supplied source manifest; proposed and counterfactual scenarios may omit it
 when clearly labeled.
@@ -216,6 +221,7 @@ cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- source-ref-report
+cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report

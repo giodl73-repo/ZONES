@@ -55,6 +55,68 @@ pub struct SourceManifestReport {
     pub imported_count: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceAcquisitionMode {
+    ManualReference,
+    FletchCandidate,
+    LocalDerived,
+    SyntheticFixture,
+    Imported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceCachePolicy {
+    ReferenceOnly,
+    IgnoredLocalCache,
+    DerivedMetadataOnly,
+    CommittedFixture,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceGateEntry {
+    pub source_id: String,
+    pub acquisition_mode: SourceAcquisitionMode,
+    pub cache_policy: SourceCachePolicy,
+    pub rights_posture: String,
+    pub expected_artifact: String,
+    pub hash_required: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gate_notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceGatePolicy {
+    pub policy_id: String,
+    pub source_manifest_id: String,
+    pub generated_on: String,
+    pub entries: Vec<SourceGateEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceGateReport {
+    pub policy_id: String,
+    pub source_manifest_id: String,
+    pub source_count: usize,
+    pub policy_entry_count: usize,
+    pub covered_source_count: usize,
+    pub missing_source_ids: Vec<String>,
+    pub extra_entry_source_ids: Vec<String>,
+    pub manual_reference_count: usize,
+    pub fletch_candidate_count: usize,
+    pub local_derived_count: usize,
+    pub synthetic_fixture_count: usize,
+    pub imported_count: usize,
+    pub reference_only_count: usize,
+    pub ignored_local_cache_count: usize,
+    pub derived_metadata_only_count: usize,
+    pub committed_fixture_count: usize,
+    pub hash_required_count: usize,
+    pub gate_note_count: usize,
+    pub source_gate_ready: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZonePlanSourceRefReport {
     pub input_id: String,
@@ -428,6 +490,8 @@ pub enum TemporalModelError {
     DuplicateSourceId { source_id: String },
     #[error("source limitation matrix contains duplicate source id {source_id}")]
     DuplicateSourceLimitationSourceId { source_id: String },
+    #[error("source gate policy contains duplicate source id {source_id}")]
+    DuplicateSourceGateEntrySourceId { source_id: String },
     #[error("module boundary contract contains duplicate module id {module_id}")]
     DuplicateModuleBoundaryModuleId { module_id: String },
     #[error("source {source_id} has empty URL")]
@@ -521,6 +585,108 @@ impl SourceManifest {
                 SourceKind::Imported => report.imported_count += 1,
             }
         }
+        Ok(report)
+    }
+}
+
+impl SourceGateEntry {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("source_gate_entry.source_id", &self.source_id)?;
+        validate_non_empty("source_gate_entry.rights_posture", &self.rights_posture)?;
+        validate_non_empty(
+            "source_gate_entry.expected_artifact",
+            &self.expected_artifact,
+        )
+    }
+}
+
+impl SourceGatePolicy {
+    pub fn validate(&self) -> Result<(), TemporalModelError> {
+        validate_non_empty("source_gate_policy.policy_id", &self.policy_id)?;
+        validate_non_empty(
+            "source_gate_policy.source_manifest_id",
+            &self.source_manifest_id,
+        )?;
+        validate_non_empty("source_gate_policy.generated_on", &self.generated_on)?;
+        let mut source_ids = BTreeSet::new();
+        for entry in &self.entries {
+            entry.validate()?;
+            if !source_ids.insert(entry.source_id.as_str()) {
+                return Err(TemporalModelError::DuplicateSourceGateEntrySourceId {
+                    source_id: entry.source_id.clone(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn report(
+        &self,
+        manifest: &SourceManifest,
+    ) -> Result<SourceGateReport, TemporalModelError> {
+        self.validate()?;
+        manifest.validate()?;
+        let manifest_source_ids = manifest.source_ids();
+        let policy_source_ids = self
+            .entries
+            .iter()
+            .map(|entry| entry.source_id.as_str())
+            .collect::<BTreeSet<_>>();
+        let missing_source_ids = manifest_source_ids
+            .difference(&policy_source_ids)
+            .map(|source_id| (*source_id).to_string())
+            .collect::<Vec<_>>();
+        let extra_entry_source_ids = policy_source_ids
+            .difference(&manifest_source_ids)
+            .map(|source_id| (*source_id).to_string())
+            .collect::<Vec<_>>();
+        let mut report = SourceGateReport {
+            policy_id: self.policy_id.clone(),
+            source_manifest_id: self.source_manifest_id.clone(),
+            source_count: manifest.sources.len(),
+            policy_entry_count: self.entries.len(),
+            covered_source_count: manifest_source_ids.intersection(&policy_source_ids).count(),
+            missing_source_ids,
+            extra_entry_source_ids,
+            manual_reference_count: 0,
+            fletch_candidate_count: 0,
+            local_derived_count: 0,
+            synthetic_fixture_count: 0,
+            imported_count: 0,
+            reference_only_count: 0,
+            ignored_local_cache_count: 0,
+            derived_metadata_only_count: 0,
+            committed_fixture_count: 0,
+            hash_required_count: 0,
+            gate_note_count: 0,
+            source_gate_ready: false,
+        };
+
+        for entry in &self.entries {
+            match entry.acquisition_mode {
+                SourceAcquisitionMode::ManualReference => report.manual_reference_count += 1,
+                SourceAcquisitionMode::FletchCandidate => report.fletch_candidate_count += 1,
+                SourceAcquisitionMode::LocalDerived => report.local_derived_count += 1,
+                SourceAcquisitionMode::SyntheticFixture => report.synthetic_fixture_count += 1,
+                SourceAcquisitionMode::Imported => report.imported_count += 1,
+            }
+            match entry.cache_policy {
+                SourceCachePolicy::ReferenceOnly => report.reference_only_count += 1,
+                SourceCachePolicy::IgnoredLocalCache => report.ignored_local_cache_count += 1,
+                SourceCachePolicy::DerivedMetadataOnly => report.derived_metadata_only_count += 1,
+                SourceCachePolicy::CommittedFixture => report.committed_fixture_count += 1,
+            }
+            if entry.hash_required {
+                report.hash_required_count += 1;
+            }
+            report.gate_note_count += entry.gate_notes.len();
+        }
+
+        report.source_gate_ready = self.source_manifest_id == manifest.manifest_id
+            && report.covered_source_count == report.source_count
+            && report.policy_entry_count == report.source_count
+            && report.extra_entry_source_ids.is_empty()
+            && report.hash_required_count > 0;
         Ok(report)
     }
 }
@@ -2958,6 +3124,122 @@ pub fn seed_source_manifest() -> SourceManifest {
     }
 }
 
+pub fn seed_source_gate_policy() -> SourceGatePolicy {
+    SourceGatePolicy {
+        policy_id: "zones-us-foundation-source-gate-v0".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        entries: vec![
+            SourceGateEntry {
+                source_id: "census-tiger-counties-2024".to_string(),
+                acquisition_mode: SourceAcquisitionMode::FletchCandidate,
+                cache_policy: SourceCachePolicy::IgnoredLocalCache,
+                rights_posture:
+                    "US Census public data; raw national GIS cache must stay out of git."
+                        .to_string(),
+                expected_artifact: "RPLAN county context with GEOID unit order, adjacency, and source hash references."
+                    .to_string(),
+                hash_required: true,
+                gate_notes: vec![
+                    "Boundary source only; time-zone assignments must cite DOT/49 CFR evidence separately."
+                        .to_string(),
+                ],
+            },
+            SourceGateEntry {
+                source_id: "census-county-gazetteer-2024".to_string(),
+                acquisition_mode: SourceAcquisitionMode::FletchCandidate,
+                cache_policy: SourceCachePolicy::IgnoredLocalCache,
+                rights_posture:
+                    "US Census public data; derived representative-point rows may be regenerated."
+                        .to_string(),
+                expected_artifact:
+                    "County representative-point table with GEOID, longitude, latitude, and source hash."
+                        .to_string(),
+                hash_required: true,
+                gate_notes: vec![
+                    "Internal points are exploratory and must be labeled before publication."
+                        .to_string(),
+                ],
+            },
+            SourceGateEntry {
+                source_id: "census-county-population-estimates-2024".to_string(),
+                acquisition_mode: SourceAcquisitionMode::FletchCandidate,
+                cache_policy: SourceCachePolicy::IgnoredLocalCache,
+                rights_posture:
+                    "US Census public data; source-derived county weights must record vintage."
+                        .to_string(),
+                expected_artifact:
+                    "County population table keyed by GEOID with source hash and vintage."
+                        .to_string(),
+                hash_required: true,
+                gate_notes: vec![
+                    "Population weights must not remain placeholders for the baseline scorecard."
+                        .to_string(),
+                ],
+            },
+            SourceGateEntry {
+                source_id: "dot-49-cfr-71".to_string(),
+                acquisition_mode: SourceAcquisitionMode::ManualReference,
+                cache_policy: SourceCachePolicy::ReferenceOnly,
+                rights_posture: "Federal regulation reference; cite retrieved eCFR text and clause paths."
+                    .to_string(),
+                expected_artifact:
+                    "Machine-readable current-law assignment evidence table citing 49 CFR Part 71 clauses."
+                        .to_string(),
+                hash_required: false,
+                gate_notes: vec![
+                    "County-level assignments must preserve clause evidence and uncertainty."
+                        .to_string(),
+                ],
+            },
+            SourceGateEntry {
+                source_id: "dot-time-zone-map-layer".to_string(),
+                acquisition_mode: SourceAcquisitionMode::FletchCandidate,
+                cache_policy: SourceCachePolicy::IgnoredLocalCache,
+                rights_posture:
+                    "DOT public map reference; verify metadata, vintage, and distribution terms before broad cache."
+                        .to_string(),
+                expected_artifact:
+                    "Reconciliation table comparing DOT geometry to county units and 49 CFR clauses."
+                        .to_string(),
+                hash_required: true,
+                gate_notes: vec![
+                    "Map geometry cannot override 49 CFR text without a documented reconciliation note."
+                        .to_string(),
+                ],
+            },
+            SourceGateEntry {
+                source_id: "dot-time-zone-procedure".to_string(),
+                acquisition_mode: SourceAcquisitionMode::ManualReference,
+                cache_policy: SourceCachePolicy::ReferenceOnly,
+                rights_posture: "DOT public guidance; cite as process context, not score data."
+                    .to_string(),
+                expected_artifact:
+                    "Research note for boundary-change procedure and convenience-of-commerce context."
+                        .to_string(),
+                hash_required: false,
+                gate_notes: vec!["Procedure guidance must not be treated as a scoring dataset.".to_string()],
+            },
+            SourceGateEntry {
+                source_id: "iana-tzdb-theory".to_string(),
+                acquisition_mode: SourceAcquisitionMode::ManualReference,
+                cache_policy: SourceCachePolicy::ReferenceOnly,
+                rights_posture:
+                    "IANA tzdb documentation reference; use for limitations and offset-rule context."
+                        .to_string(),
+                expected_artifact:
+                    "Research note explaining why IANA tzdb is not legal-boundary evidence."
+                        .to_string(),
+                hash_required: false,
+                gate_notes: vec![
+                    "Do not use as complete legal-boundary geometry for the US county baseline."
+                        .to_string(),
+                ],
+            },
+        ],
+    }
+}
+
 pub fn seed_source_limitation_matrix() -> SourceLimitationMatrix {
     SourceLimitationMatrix {
         matrix_id: "zones-source-limitation-matrix-v0".to_string(),
@@ -4191,6 +4473,27 @@ mod tests {
     }
 
     #[test]
+    fn seed_source_gate_policy_reports_ready_gate() {
+        let report = seed_source_gate_policy()
+            .report(&seed_source_manifest())
+            .unwrap();
+
+        assert_eq!(report.policy_id, "zones-us-foundation-source-gate-v0");
+        assert_eq!(report.source_count, 7);
+        assert_eq!(report.policy_entry_count, 7);
+        assert_eq!(report.covered_source_count, 7);
+        assert_eq!(report.missing_source_ids, Vec::<String>::new());
+        assert_eq!(report.extra_entry_source_ids, Vec::<String>::new());
+        assert_eq!(report.fletch_candidate_count, 4);
+        assert_eq!(report.manual_reference_count, 3);
+        assert_eq!(report.ignored_local_cache_count, 4);
+        assert_eq!(report.reference_only_count, 3);
+        assert_eq!(report.hash_required_count, 4);
+        assert_eq!(report.gate_note_count, 7);
+        assert!(report.source_gate_ready);
+    }
+
+    #[test]
     fn seed_source_limitation_matrix_reports_claim_support() {
         let report = seed_source_limitation_matrix().report().unwrap();
 
@@ -4298,6 +4601,22 @@ mod tests {
 
         assert_eq!(manifest, seed_source_manifest());
         assert!(manifest.report().is_ok());
+    }
+
+    #[test]
+    fn committed_source_gate_policy_matches_seed_policy() {
+        let policy: SourceGatePolicy = serde_json::from_str(include_str!(
+            "../../../data/source-gates/us-foundation-source-gate.json"
+        ))
+        .unwrap();
+
+        assert_eq!(policy, seed_source_gate_policy());
+        assert!(
+            policy
+                .report(&seed_source_manifest())
+                .unwrap()
+                .source_gate_ready
+        );
     }
 
     #[test]

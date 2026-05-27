@@ -1,0 +1,84 @@
+{
+  "policy_id": "zones-us-foundation-source-gate-v0",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-26",
+  "entries": [
+    {
+      "source_id": "census-tiger-counties-2024",
+      "acquisition_mode": "fletch-candidate",
+      "cache_policy": "ignored-local-cache",
+      "rights_posture": "US Census public data; raw national GIS cache must stay out of git.",
+      "expected_artifact": "RPLAN county context with GEOID unit order, adjacency, and source hash references.",
+      "hash_required": true,
+      "gate_notes": [
+        "Boundary source only; time-zone assignments must cite DOT/49 CFR evidence separately."
+      ]
+    },
+    {
+      "source_id": "census-county-gazetteer-2024",
+      "acquisition_mode": "fletch-candidate",
+      "cache_policy": "ignored-local-cache",
+      "rights_posture": "US Census public data; derived representative-point rows may be regenerated.",
+      "expected_artifact": "County representative-point table with GEOID, longitude, latitude, and source hash.",
+      "hash_required": true,
+      "gate_notes": [
+        "Internal points are exploratory and must be labeled before publication."
+      ]
+    },
+    {
+      "source_id": "census-county-population-estimates-2024",
+      "acquisition_mode": "fletch-candidate",
+      "cache_policy": "ignored-local-cache",
+      "rights_posture": "US Census public data; source-derived county weights must record vintage.",
+      "expected_artifact": "County population table keyed by GEOID with source hash and vintage.",
+      "hash_required": true,
+      "gate_notes": [
+        "Population weights must not remain placeholders for the baseline scorecard."
+      ]
+    },
+    {
+      "source_id": "dot-49-cfr-71",
+      "acquisition_mode": "manual-reference",
+      "cache_policy": "reference-only",
+      "rights_posture": "Federal regulation reference; cite retrieved eCFR text and clause paths.",
+      "expected_artifact": "Machine-readable current-law assignment evidence table citing 49 CFR Part 71 clauses.",
+      "hash_required": false,
+      "gate_notes": [
+        "County-level assignments must preserve clause evidence and uncertainty."
+      ]
+    },
+    {
+      "source_id": "dot-time-zone-map-layer",
+      "acquisition_mode": "fletch-candidate",
+      "cache_policy": "ignored-local-cache",
+      "rights_posture": "DOT public map reference; verify metadata, vintage, and distribution terms before broad cache.",
+      "expected_artifact": "Reconciliation table comparing DOT geometry to county units and 49 CFR clauses.",
+      "hash_required": true,
+      "gate_notes": [
+        "Map geometry cannot override 49 CFR text without a documented reconciliation note."
+      ]
+    },
+    {
+      "source_id": "dot-time-zone-procedure",
+      "acquisition_mode": "manual-reference",
+      "cache_policy": "reference-only",
+      "rights_posture": "DOT public guidance; cite as process context, not score data.",
+      "expected_artifact": "Research note for boundary-change procedure and convenience-of-commerce context.",
+      "hash_required": false,
+      "gate_notes": [
+        "Procedure guidance must not be treated as a scoring dataset."
+      ]
+    },
+    {
+      "source_id": "iana-tzdb-theory",
+      "acquisition_mode": "manual-reference",
+      "cache_policy": "reference-only",
+      "rights_posture": "IANA tzdb documentation reference; use for limitations and offset-rule context.",
+      "expected_artifact": "Research note explaining why IANA tzdb is not legal-boundary evidence.",
+      "hash_required": false,
+      "gate_notes": [
+        "Do not use as complete legal-boundary geometry for the US county baseline."
+      ]
+    }
+  ]
+}

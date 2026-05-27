@@ -47,6 +47,7 @@ cargo run -p zones-cli -- evaluate-plan-detail
 cargo run -p zones-cli -- write-evaluation
 cargo run -p zones-cli -- source-report
 cargo run -p zones-cli -- source-ref-report
+cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report
@@ -89,6 +90,10 @@ evaluation contexts without claiming to be a legal dataset.
 `data/source-limitation-matrix/global-source-claims.json` records which source
 families can support offset-history, legal-boundary, administrative-boundary,
 metadata, population, and representative-point claims.
+`data/source-gates/us-foundation-source-gate.json` records the source-gate
+policy for the US baseline: acquisition mode, cache posture, rights posture,
+expected artifact, hash requirement, and gate notes for every source in the US
+foundation manifest.
 `data/module-boundaries/zones-rplan-rline.json` records which responsibilities
 belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 
