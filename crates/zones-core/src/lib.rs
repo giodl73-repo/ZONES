@@ -2637,25 +2637,26 @@ pub fn render_offset_fit_svg(
         .unit_scores
         .iter()
         .any(|score| score.map_geometry.is_some() || score.map_point.is_some());
-    let min_x = points
+    let bounds_points = offset_map_bounds_points(report, &points);
+    let min_x = bounds_points
         .iter()
         .map(|point| point.x)
         .fold(f64::INFINITY, f64::min)
         .floor()
         - if has_real_placement { 2.0 } else { 30.0 };
-    let max_x = points
+    let max_x = bounds_points
         .iter()
         .map(|point| point.x)
         .fold(f64::NEG_INFINITY, f64::max)
         .ceil()
         + if has_real_placement { 2.0 } else { 30.0 };
-    let min_y = points
+    let min_y = bounds_points
         .iter()
         .map(|point| point.y)
         .fold(f64::INFINITY, f64::min)
         .floor()
         - 2.0;
-    let max_y = points
+    let max_y = bounds_points
         .iter()
         .map(|point| point.y)
         .fold(f64::NEG_INFINITY, f64::max)
@@ -2673,6 +2674,10 @@ pub fn render_offset_fit_svg(
         .map(|score| score.population)
         .max()
         .unwrap_or(1) as f64;
+    let has_geometry = report
+        .unit_scores
+        .iter()
+        .any(|score| score.map_geometry.is_some());
 
     let mut svg = String::new();
     svg.push_str(&format!(
@@ -2732,15 +2737,37 @@ pub fn render_offset_fit_svg(
         let error = offset_map_error(score, view);
         let offset = offset_map_offset(score, view);
         let color = error_color(error, max_error);
-        svg.push_str(&format!(
-            "<circle cx=\"{x:.2}\" cy=\"{y:.2}\" r=\"{radius:.2}\" fill=\"{color}\" stroke=\"#0f172a\" stroke-width=\"1.2\">\n<title>{}: offset {}, error {:.1} min</title>\n</circle>\n",
-            escape_xml(&score.unit_name),
-            format_offset(offset),
-            error
-        ));
+        if let Some(geometry) = &score.map_geometry {
+            let path = map_geometry_to_svg_path(
+                geometry,
+                min_x,
+                max_x,
+                left,
+                left + plot_width,
+                min_y,
+                max_y,
+                top + plot_height,
+                top,
+            );
+            svg.push_str(&format!(
+                "<path d=\"{}\" fill=\"{color}\" fill-opacity=\"0.86\" stroke=\"#0f172a\" stroke-width=\"1.2\" fill-rule=\"evenodd\">\n<title>{}: offset {}, error {:.1} min</title>\n</path>\n",
+                path,
+                escape_xml(&score.unit_name),
+                format_offset(offset),
+                error
+            ));
+        } else {
+            let fill_opacity = if has_geometry { "0.70" } else { "1.0" };
+            svg.push_str(&format!(
+                "<circle cx=\"{x:.2}\" cy=\"{y:.2}\" r=\"{radius:.2}\" fill=\"{color}\" fill-opacity=\"{fill_opacity}\" stroke=\"#0f172a\" stroke-width=\"1.2\">\n<title>{}: offset {}, error {:.1} min</title>\n</circle>\n",
+                escape_xml(&score.unit_name),
+                format_offset(offset),
+                error
+            ));
+        }
         svg.push_str(&format!(
             "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"system-ui, sans-serif\" font-size=\"12\" fill=\"#111827\">{}</text>\n",
-            x + radius + 6.0,
+            if score.map_geometry.is_some() { x + 6.0 } else { x + radius + 6.0 },
             y + 4.0,
             escape_xml(&score.unit_id)
         ));
@@ -2834,6 +2861,7 @@ fn schematic_latitude(index: usize, count: usize) -> f64 {
     top - (index as f64 * (top - bottom) / (count - 1) as f64)
 }
 
+#[derive(Clone, Copy)]
 struct OffsetRenderPoint {
     x: f64,
     y: f64,
@@ -2864,6 +2892,30 @@ fn offset_map_points(report: &OffsetFitReport) -> Vec<OffsetRenderPoint> {
             }
         })
         .collect()
+}
+
+fn offset_map_bounds_points(
+    report: &OffsetFitReport,
+    render_points: &[OffsetRenderPoint],
+) -> Vec<OffsetRenderPoint> {
+    let mut points = Vec::new();
+    for (index, score) in report.unit_scores.iter().enumerate() {
+        if let Some(geometry) = &score.map_geometry {
+            points.extend(map_geometry_points(geometry).into_iter().map(|point| {
+                OffsetRenderPoint {
+                    x: point[0],
+                    y: point[1],
+                }
+            }));
+        } else if let Some(point) = render_points.get(index) {
+            points.push(*point);
+        }
+    }
+    if points.is_empty() {
+        render_points.to_vec()
+    } else {
+        points
+    }
 }
 
 fn point_geometry_to_geojson(longitude: f64, latitude: f64) -> String {
@@ -2904,6 +2956,70 @@ fn coordinate_rings_to_json(rings: &[Vec<[f64; 2]>]) -> String {
         .collect::<Vec<_>>()
         .join(",");
     format!("[{ring_json}]")
+}
+
+fn map_geometry_to_svg_path(
+    geometry: &MapGeometry,
+    min_x: f64,
+    max_x: f64,
+    out_min_x: f64,
+    out_max_x: f64,
+    min_y: f64,
+    max_y: f64,
+    out_min_y: f64,
+    out_max_y: f64,
+) -> String {
+    match geometry {
+        MapGeometry::Point(point) => {
+            let x = scale(point[0], min_x, max_x, out_min_x, out_max_x);
+            let y = scale(point[1], min_y, max_y, out_min_y, out_max_y);
+            format!("M {x:.2} {y:.2}")
+        }
+        MapGeometry::Polygon(rings) => coordinate_rings_to_svg_path(
+            rings, min_x, max_x, out_min_x, out_max_x, min_y, max_y, out_min_y, out_max_y,
+        ),
+        MapGeometry::MultiPolygon(polygons) => polygons
+            .iter()
+            .map(|rings| {
+                coordinate_rings_to_svg_path(
+                    rings, min_x, max_x, out_min_x, out_max_x, min_y, max_y, out_min_y, out_max_y,
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+    }
+}
+
+fn coordinate_rings_to_svg_path(
+    rings: &[Vec<[f64; 2]>],
+    min_x: f64,
+    max_x: f64,
+    out_min_x: f64,
+    out_max_x: f64,
+    min_y: f64,
+    max_y: f64,
+    out_min_y: f64,
+    out_max_y: f64,
+) -> String {
+    rings
+        .iter()
+        .filter(|ring| !ring.is_empty())
+        .map(|ring| {
+            let mut commands = String::new();
+            for (index, point) in ring.iter().enumerate() {
+                let x = scale(point[0], min_x, max_x, out_min_x, out_max_x);
+                let y = scale(point[1], min_y, max_y, out_min_y, out_max_y);
+                if index == 0 {
+                    commands.push_str(&format!("M {x:.2} {y:.2}"));
+                } else {
+                    commands.push_str(&format!(" L {x:.2} {y:.2}"));
+                }
+            }
+            commands.push_str(" Z");
+            commands
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn map_geometry_centroid(geometry: &MapGeometry) -> Option<(f64, f64)> {
@@ -5050,6 +5166,8 @@ mod tests {
         assert!(svg.contains("using plan geometry or map_point coordinates"));
         assert!(svg.contains("longitude"));
         assert!(svg.contains("west-a"));
+        assert!(svg.contains("<path"));
+        assert!(svg.contains("fill-rule=\"evenodd\""));
     }
 
     #[test]

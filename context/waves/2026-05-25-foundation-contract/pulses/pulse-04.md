@@ -46,6 +46,7 @@ counties and the representative-point method is exploratory.
 - `cargo run -p zones-cli -- geometry-reconciliation-report`
 - `cargo run -p zones-cli -- compare-offset-candidates data/plan-inputs/us-county-baseline-seed.json --output target/zones/us-county-baseline-seed/candidate-comparison.json`
 - `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --output-dir target/zones/us-county-baseline-seed/candidate-maps`
+- `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/seed-plan.json --geojson data/boundaries/seed-boundaries.geojson --require-all-units --output-dir target/zones/seed-boundary-candidate-maps`
 - `git diff --check`
 
 ## Status
@@ -68,3 +69,8 @@ In progress.
   option includes the materialized plan input, offset-fit JSON, GeoJSON, SVG map
   set, and an atlas page, with the packet index explicitly keeping the
   recommendation gate closed.
+- Extended the candidate map packet path to accept an optional boundary
+  GeoJSON join and render SVG polygons when plan geometry is present. This makes
+  the option-map packet geometry-backed for fixtures with committed boundaries
+  while the US county seed remains gated by source-derived county boundary
+  availability.

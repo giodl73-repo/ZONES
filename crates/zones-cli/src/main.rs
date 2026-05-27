@@ -126,6 +126,12 @@ enum Command {
     WriteOffsetCandidateMaps {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
+        #[arg(long)]
+        geojson: Option<PathBuf>,
+        #[arg(long, default_value = "unit_id")]
+        unit_id_property: String,
+        #[arg(long)]
+        require_all_units: bool,
         #[arg(long, default_value_t = 60)]
         dst_delta_minutes: i32,
         #[arg(long, default_value = "target/zones/offset-candidate-maps")]
@@ -404,13 +410,30 @@ fn main() -> Result<()> {
         }
         Command::WriteOffsetCandidateMaps {
             path,
+            geojson,
+            unit_id_property,
+            require_all_units,
             dst_delta_minutes,
             output_dir,
         } => {
             let bytes =
                 fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
-            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+            let mut input: ZonePlanInput = serde_json::from_slice(&bytes)
                 .with_context(|| format!("failed to parse {}", path.display()))?;
+            if let Some(geojson_path) = geojson {
+                let geojson_text = fs::read_to_string(&geojson_path)
+                    .with_context(|| format!("failed to read {}", geojson_path.display()))?;
+                let join_report = attach_geojson_geometries(
+                    &input,
+                    &geojson_text,
+                    &GeometryJoinOptions {
+                        unit_id_property,
+                        require_all_units,
+                    },
+                )?;
+                write_json(&output_dir.join("geometry-join-report.json"), &join_report)?;
+                input = join_report.input;
+            }
             let grids = [
                 OffsetCandidateGrid::WholeHour,
                 OffsetCandidateGrid::HalfHour,

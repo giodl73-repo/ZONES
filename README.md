@@ -133,7 +133,9 @@ plan inputs for whole-hour, half-hour, or quarter-hour grids.
 the whole-hour, half-hour, and quarter-hour candidate grids. Each option gets a
 plan input, offset-fit JSON, GeoJSON, SVG maps, and an atlas page under
 `target/zones/` by default; the packet index keeps the recommendation gate
-closed.
+closed. Pass `--geojson <FeatureCollection>` to join boundary geometry before
+rendering, so SVG maps draw filled unit polygons instead of point markers when
+geometry is available.
 When plan units include `map_geometry` polygons or multipolygons, GeoJSON emits
 those shapes. If only `map_point` coordinates are present, it emits
 representative points; otherwise it falls back to schematic points derived from
@@ -177,6 +179,7 @@ For the source-derived seed candidate map packet:
 
 ```powershell
 cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --output-dir target/zones/us-county-baseline-seed/candidate-maps
+cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/seed-plan.json --geojson data/boundaries/seed-boundaries.geojson --require-all-units --output-dir target/zones/seed-boundary-candidate-maps
 ```
 
 The baseline smoke scorecard can be generated under ignored output paths with:
