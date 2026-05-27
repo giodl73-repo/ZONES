@@ -51,7 +51,7 @@ Pulse 02 proved the shape of the intake path:
 
 ## Status
 
-In progress.
+Done.
 
 ## Pulse log
 
@@ -81,3 +81,19 @@ In progress.
   polygons against their expected zone polygons. The geometry gate now reports
   `reconciled_count: 4` and `geometry_reconciliation_ready: true` for the seed,
   with a source-precision caveat on Baldwin County.
+- Generated the source-derived seed scorecard artifact family under ignored
+  `target/zones/us-county-baseline-seed/`: detailed evaluation JSON, unit and
+  zone CSVs, offset-fit JSON/CSV, GeoJSON, maps, atlas, and offset candidate
+  plan. These are measurement artifacts only and not publication outputs.
+- Added `reviews/pulse-03-role-review.md`. Roles accept the four-county seed as
+  an internal source-derived rehearsal and keep publication/recommendation gates
+  closed.
+
+## Closeout
+
+Pulse 03 completes the first source-derived county seed graph/current-plan path.
+The seed is not a national baseline and does not recommend any time-zone change.
+
+The next pulse should compare current and candidate plan families over the seed
+with explicit tradeoff weights, while preserving source, score, publication, and
+recommendation gates.

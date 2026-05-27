@@ -18,8 +18,8 @@ solar-time error, jurisdiction stability, source assumptions, and map outputs.
 |------:|-------|--------|---------|
 | 01 | Workspace foundation | done | Create repo skeleton, docs, skills, and first tested RPLAN-backed evaluator. |
 | 02 | US county source intake | done | Prove the source-gated county intake and baseline-smoke scorecard path without publication or recommendation claims. |
-| 03 | US county seed graph | ready | Replace smoke fixtures with the first source-derived county graph, assignment, point, and population inputs. |
-| 04 | Candidate scoring report | pending | Compare current and proposed plans with explicit tradeoff weights. |
+| 03 | US county seed graph | done | Replace smoke fixtures with source-derived four-county graph, assignment, point, population, and DOT geometry inputs. |
+| 04 | Candidate scoring report | ready | Compare current and proposed plans with explicit tradeoff weights. |
 
 ## Current implementation state
 
@@ -36,10 +36,14 @@ the existing evaluator and map/report commands.
 
 Pulse 02 is complete as a smoke rehearsal: source gate policy, RPLAN context
 gate, assignment evidence gate, representative-point gate, baseline-smoke plan
-input, ignored scorecard artifacts, and role review are in place. Pulse 03 is
-the first source-derived county graph/current-plan pass and remains blocked from
-publication until placeholder legal assignments, placeholder population weights,
-and exploratory point methods are replaced or explicitly reviewed.
+input, ignored scorecard artifacts, and role review are in place.
+
+Pulse 03 is complete as a source-derived four-county seed: Census Gazetteer
+points, Census population estimates, TIGER-derived adjacency, 49 CFR clause-cited
+assignments, BTS/NTAD polygon reconciliation, seed baseline input, ignored
+scorecard artifacts, and role review are in place. It remains non-publishable as
+a national baseline because scope is four counties and point methodology is
+exploratory.
 
 ## Success criteria
 

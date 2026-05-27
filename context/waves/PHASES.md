@@ -5,7 +5,7 @@ Work is organized into small waves and pulses.
 ## Active wave
 
 - `2026-05-25-foundation-contract`
-- target pulse: `2026-05-25-foundation-contract/pulses/pulse-03.md`
+- target pulse: `2026-05-25-foundation-contract/pulses/pulse-04.md`
 
 ## Protocol
 
