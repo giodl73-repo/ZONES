@@ -1,6 +1,9 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use zones_core::{
     attach_geojson_geometries, build_offset_candidate_plan, compare_offset_candidate_plans,
     evaluate_offset_fit, evaluate_zone_plan, evaluate_zone_plan_evaluation_with_catalog,
@@ -119,6 +122,14 @@ enum Command {
         path: PathBuf,
         #[arg(long, default_value = "target/zones/offset-candidate-comparison.json")]
         output: PathBuf,
+    },
+    WriteOffsetCandidateMaps {
+        #[arg(default_value = "data/plan-inputs/seed-plan.json")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 60)]
+        dst_delta_minutes: i32,
+        #[arg(long, default_value = "target/zones/offset-candidate-maps")]
+        output_dir: PathBuf,
     },
     AttachGeojsonGeometries {
         geojson: PathBuf,
@@ -390,6 +401,62 @@ fn main() -> Result<()> {
             )?;
             write_json(&output, &report)?;
             println!("{}", output.display());
+        }
+        Command::WriteOffsetCandidateMaps {
+            path,
+            dst_delta_minutes,
+            output_dir,
+        } => {
+            let bytes =
+                fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+            let input: ZonePlanInput = serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let grids = [
+                OffsetCandidateGrid::WholeHour,
+                OffsetCandidateGrid::HalfHour,
+                OffsetCandidateGrid::QuarterHour,
+            ];
+            let comparison = compare_offset_candidate_plans(&input, &grids)?;
+            write_json(&output_dir.join("candidate-comparison.json"), &comparison)?;
+
+            let mut packet_links = Vec::new();
+            write_offset_candidate_map_packet(
+                &output_dir.join("current-law"),
+                "Current-law baseline",
+                &input,
+                dst_delta_minutes,
+            )?;
+            packet_links.push((
+                "Current-law baseline".to_string(),
+                "current-law/atlas/index.html".to_string(),
+                "current-law/offset-fit.geojson".to_string(),
+            ));
+
+            for grid in grids {
+                let candidate = build_offset_candidate_plan(&input, grid)?;
+                let label = format!("{} candidate grid", grid.label());
+                let slug = grid.slug();
+                write_offset_candidate_map_packet(
+                    &output_dir.join(slug),
+                    &label,
+                    &candidate,
+                    dst_delta_minutes,
+                )?;
+                packet_links.push((
+                    label,
+                    format!("{slug}/atlas/index.html"),
+                    format!("{slug}/offset-fit.geojson"),
+                ));
+            }
+
+            let index_path = output_dir.join("index.html");
+            fs::write(
+                &index_path,
+                render_offset_candidate_maps_index_html(&input.input_id, &packet_links),
+            )
+            .with_context(|| format!("failed to write {}", index_path.display()))?;
+            println!("{}", output_dir.display());
+            println!("{}", index_path.display());
         }
         Command::AttachGeojsonGeometries {
             path,
@@ -826,6 +893,121 @@ object {{
         report.best_whole_hour_weighted_mean_error_minutes,
         report.best_half_hour_weighted_mean_error_minutes,
         report.best_quarter_hour_weighted_mean_error_minutes,
+        cards
+    )
+}
+
+fn write_offset_candidate_map_packet(
+    output_dir: &Path,
+    label: &str,
+    input: &ZonePlanInput,
+    dst_delta_minutes: i32,
+) -> Result<()> {
+    fs::create_dir_all(output_dir)
+        .with_context(|| format!("failed to create output directory {}", output_dir.display()))?;
+    write_json(&output_dir.join("plan-input.json"), input)?;
+    let report = evaluate_offset_fit(input, dst_delta_minutes)?;
+    write_json(&output_dir.join("offset-fit.json"), &report)?;
+    let geojson_path = output_dir.join("offset-fit.geojson");
+    fs::write(
+        &geojson_path,
+        zones_core::render_offset_fit_geojson(&report),
+    )
+    .with_context(|| format!("failed to write {}", geojson_path.display()))?;
+
+    let maps_dir = output_dir.join("maps");
+    fs::create_dir_all(&maps_dir)
+        .with_context(|| format!("failed to create output directory {}", maps_dir.display()))?;
+    let atlas_dir = output_dir.join("atlas");
+    fs::create_dir_all(&atlas_dir)
+        .with_context(|| format!("failed to create output directory {}", atlas_dir.display()))?;
+
+    let mut map_files = Vec::new();
+    for view in offset_map_views() {
+        let file_name = format!("{}.svg", view.slug());
+        let svg =
+            zones_core::render_offset_fit_svg(&report, view, &OffsetMapRenderOptions::default());
+        let map_path = maps_dir.join(&file_name);
+        fs::write(&map_path, &svg)
+            .with_context(|| format!("failed to write {}", map_path.display()))?;
+        let atlas_path = atlas_dir.join(&file_name);
+        fs::write(&atlas_path, svg)
+            .with_context(|| format!("failed to write {}", atlas_path.display()))?;
+        map_files.push((view, file_name));
+    }
+
+    let index_path = atlas_dir.join("index.html");
+    fs::write(&index_path, render_offset_atlas_html(&report, &map_files))
+        .with_context(|| format!("failed to write {}", index_path.display()))?;
+    println!("{}: {}", label, output_dir.display());
+    Ok(())
+}
+
+fn render_offset_candidate_maps_index_html(
+    input_id: &str,
+    packet_links: &[(String, String, String)],
+) -> String {
+    let mut cards = String::new();
+    for (label, atlas_path, geojson_path) in packet_links {
+        cards.push_str(&format!(
+            "<li><strong>{}</strong>: <a href=\"{}\">atlas</a> | <a href=\"{}\">GeoJSON</a></li>\n",
+            html_escape(label),
+            html_escape(atlas_path),
+            html_escape(geojson_path)
+        ));
+    }
+    format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZONES Candidate Map Packet</title>
+<style>
+:root {{
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}}
+body {{
+  margin: 0;
+  padding: 32px;
+}}
+main {{
+  max-width: 900px;
+  margin: 0 auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 24px 28px;
+}}
+.gate {{
+  border-left: 4px solid #b45309;
+  background: #fffbeb;
+  padding: 12px 14px;
+  margin: 18px 0;
+}}
+li {{
+  margin: 10px 0;
+}}
+</style>
+</head>
+<body>
+<main>
+<h1>ZONES Candidate Map Packet</h1>
+<p>Input <code>{}</code>. These maps compare current-law and generated offset-grid counterfactuals for internal measurement.</p>
+<div class="gate"><strong>Recommendation gate closed.</strong> Candidate maps are not preferred maps, enactment advice, or publication-ready national claims.</div>
+<p><a href="candidate-comparison.json">Candidate comparison JSON</a></p>
+<ul>
+{}
+</ul>
+<p>Each packet includes <code>plan-input.json</code>, <code>offset-fit.json</code>, <code>offset-fit.geojson</code>, SVG maps, and a local atlas page.</p>
+</main>
+</body>
+</html>
+"#,
+        html_escape(input_id),
         cards
     )
 }

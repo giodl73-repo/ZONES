@@ -45,6 +45,7 @@ counties and the representative-point method is exploratory.
 - `cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-baseline-seed.json`
 - `cargo run -p zones-cli -- geometry-reconciliation-report`
 - `cargo run -p zones-cli -- compare-offset-candidates data/plan-inputs/us-county-baseline-seed.json --output target/zones/us-county-baseline-seed/candidate-comparison.json`
+- `cargo run -p zones-cli -- write-offset-candidate-maps data/plan-inputs/us-county-baseline-seed.json --output-dir target/zones/us-county-baseline-seed/candidate-maps`
 - `git diff --check`
 
 ## Status
@@ -62,3 +63,8 @@ In progress.
   indexes, so equivalent whole-hour assignments do not count as moved.
 - The report keeps `recommendation_gate_closed: true`; lower error deltas are
   measurements, not recommendations.
+- Added `write-offset-candidate-maps`, which emits an ignored local map packet
+  for the current-law seed and each generated offset-grid counterfactual. Each
+  option includes the materialized plan input, offset-fit JSON, GeoJSON, SVG map
+  set, and an atlas page, with the packet index explicitly keeping the
+  recommendation gate closed.
