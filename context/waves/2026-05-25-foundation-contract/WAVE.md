@@ -17,8 +17,8 @@ solar-time error, jurisdiction stability, source assumptions, and map outputs.
 | Pulse | Title | Status | Outcome |
 |------:|-------|--------|---------|
 | 01 | Workspace foundation | done | Create repo skeleton, docs, skills, and first tested RPLAN-backed evaluator. |
-| 02 | US county source intake | ready | Convert the source inventory into the first reproducible county-level plan input contract. |
-| 03 | US county seed graph | pending | Build the first real county-level graph fixture and current-plan scorecard. |
+| 02 | US county source intake | done | Prove the source-gated county intake and baseline-smoke scorecard path without publication or recommendation claims. |
+| 03 | US county seed graph | ready | Replace smoke fixtures with the first source-derived county graph, assignment, point, and population inputs. |
 | 04 | Candidate scoring report | pending | Compare current and proposed plans with explicit tradeoff weights. |
 
 ## Current implementation state
@@ -33,6 +33,13 @@ plan generation.
 Pulse 02 should not add recommendation language. It should turn the documented
 US source inventory into a small, auditable county-level input path that can feed
 the existing evaluator and map/report commands.
+
+Pulse 02 is complete as a smoke rehearsal: source gate policy, RPLAN context
+gate, assignment evidence gate, representative-point gate, baseline-smoke plan
+input, ignored scorecard artifacts, and role review are in place. Pulse 03 is
+the first source-derived county graph/current-plan pass and remains blocked from
+publication until placeholder legal assignments, placeholder population weights,
+and exploratory point methods are replaced or explicitly reviewed.
 
 ## Success criteria
 

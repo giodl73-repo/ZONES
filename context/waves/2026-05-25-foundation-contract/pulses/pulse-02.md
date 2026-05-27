@@ -50,7 +50,7 @@ fixture-level until a county source intake can produce auditable inputs.
 
 ## Status
 
-In progress.
+Done.
 
 ## Pulse log
 
@@ -89,3 +89,14 @@ In progress.
   plan. These are measurement artifacts only and not publication outputs.
 - Added `reviews/pulse-02-role-review.md`. Roles accept the scorecard as a smoke
   rehearsal, keep publication blocked, and keep the recommendation gate closed.
+
+## Closeout
+
+Pulse 02 completes the first reproducible county intake path as a smoke
+rehearsal. It does not publish a real county baseline and does not recommend any
+time-zone changes.
+
+The next pulse should replace the smoke fixtures with source-derived county graph
+data, current-law assignment evidence, representative points, and population
+weights while preserving the source, role, publication, and recommendation
+gates.
