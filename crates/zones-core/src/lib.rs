@@ -61,13 +61,22 @@ pub struct ZonePlanSourceRefReport {
     pub source_manifest_id: String,
     pub unit_count: usize,
     pub units_with_source_refs: usize,
+    pub units_with_complete_source_refs: usize,
+    pub units_missing_source_refs: usize,
     pub boundary_source_ref_count: usize,
+    pub missing_boundary_source_ref_count: usize,
     pub representative_point_source_ref_count: usize,
+    pub missing_representative_point_source_ref_count: usize,
     pub population_source_ref_count: usize,
+    pub missing_population_source_ref_count: usize,
     pub time_zone_assignment_source_ref_count: usize,
+    pub missing_time_zone_assignment_source_ref_count: usize,
     pub time_zone_geometry_source_ref_count: usize,
+    pub missing_time_zone_geometry_source_ref_count: usize,
     pub units_with_source_caveats: usize,
+    pub units_missing_source_caveats: usize,
     pub unit_source_caveat_count: usize,
+    pub publishable_source_ref_coverage: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1652,40 +1661,81 @@ pub fn zone_plan_source_ref_report(
         source_manifest_id: manifest.manifest_id.clone(),
         unit_count: input.units.len(),
         units_with_source_refs: 0,
+        units_with_complete_source_refs: 0,
+        units_missing_source_refs: 0,
         boundary_source_ref_count: 0,
+        missing_boundary_source_ref_count: 0,
         representative_point_source_ref_count: 0,
+        missing_representative_point_source_ref_count: 0,
         population_source_ref_count: 0,
+        missing_population_source_ref_count: 0,
         time_zone_assignment_source_ref_count: 0,
+        missing_time_zone_assignment_source_ref_count: 0,
         time_zone_geometry_source_ref_count: 0,
+        missing_time_zone_geometry_source_ref_count: 0,
         units_with_source_caveats: 0,
+        units_missing_source_caveats: 0,
         unit_source_caveat_count: 0,
+        publishable_source_ref_coverage: false,
     };
 
     for unit in &input.units {
         let Some(source_refs) = &unit.source_refs else {
+            report.units_missing_source_refs += 1;
+            report.missing_boundary_source_ref_count += 1;
+            report.missing_representative_point_source_ref_count += 1;
+            report.missing_population_source_ref_count += 1;
+            report.missing_time_zone_assignment_source_ref_count += 1;
+            report.missing_time_zone_geometry_source_ref_count += 1;
+            report.units_missing_source_caveats += 1;
             continue;
         };
         report.units_with_source_refs += 1;
+        let mut has_complete_refs = true;
         if source_refs.boundary_source_id.is_some() {
             report.boundary_source_ref_count += 1;
+        } else {
+            report.missing_boundary_source_ref_count += 1;
+            has_complete_refs = false;
         }
         if source_refs.representative_point_source_id.is_some() {
             report.representative_point_source_ref_count += 1;
+        } else {
+            report.missing_representative_point_source_ref_count += 1;
+            has_complete_refs = false;
         }
         if source_refs.population_source_id.is_some() {
             report.population_source_ref_count += 1;
+        } else {
+            report.missing_population_source_ref_count += 1;
+            has_complete_refs = false;
         }
         if source_refs.time_zone_assignment_source_id.is_some() {
             report.time_zone_assignment_source_ref_count += 1;
+        } else {
+            report.missing_time_zone_assignment_source_ref_count += 1;
+            has_complete_refs = false;
         }
         if source_refs.time_zone_geometry_source_id.is_some() {
             report.time_zone_geometry_source_ref_count += 1;
+        } else {
+            report.missing_time_zone_geometry_source_ref_count += 1;
+            has_complete_refs = false;
+        }
+        if has_complete_refs {
+            report.units_with_complete_source_refs += 1;
         }
         if !source_refs.caveats.is_empty() {
             report.units_with_source_caveats += 1;
             report.unit_source_caveat_count += source_refs.caveats.len();
+        } else {
+            report.units_missing_source_caveats += 1;
         }
     }
+
+    report.publishable_source_ref_coverage = report.units_with_complete_source_refs
+        == report.unit_count
+        && report.units_with_source_caveats == report.unit_count;
 
     Ok(report)
 }
@@ -4291,13 +4341,22 @@ mod tests {
         assert_eq!(report.input_id, "zones-us-county-smoke-plan-input");
         assert_eq!(report.unit_count, 4);
         assert_eq!(report.units_with_source_refs, 4);
+        assert_eq!(report.units_with_complete_source_refs, 4);
+        assert_eq!(report.units_missing_source_refs, 0);
         assert_eq!(report.boundary_source_ref_count, 4);
+        assert_eq!(report.missing_boundary_source_ref_count, 0);
         assert_eq!(report.representative_point_source_ref_count, 4);
+        assert_eq!(report.missing_representative_point_source_ref_count, 0);
         assert_eq!(report.population_source_ref_count, 4);
+        assert_eq!(report.missing_population_source_ref_count, 0);
         assert_eq!(report.time_zone_assignment_source_ref_count, 4);
+        assert_eq!(report.missing_time_zone_assignment_source_ref_count, 0);
         assert_eq!(report.time_zone_geometry_source_ref_count, 4);
+        assert_eq!(report.missing_time_zone_geometry_source_ref_count, 0);
         assert_eq!(report.units_with_source_caveats, 4);
+        assert_eq!(report.units_missing_source_caveats, 0);
         assert_eq!(report.unit_source_caveat_count, 8);
+        assert!(report.publishable_source_ref_coverage);
     }
 
     #[test]

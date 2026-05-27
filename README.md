@@ -120,8 +120,9 @@ fixture. It uses GEOID-shaped ids and explicit caveats to prove the evaluator
 contract without claiming a source-derived national county scorecard. Its
 per-unit `source_refs` fields make boundary, point, population, time-zone
 assignment, geometry, and split-county caveats machine-readable.
-`source-ref-report` summarizes that per-unit source-reference coverage so smoke
-fixtures and future county intakes can be checked before publishing scores.
+`source-ref-report` summarizes that per-unit source-reference coverage, missing
+reference counts, and caveat coverage so smoke fixtures and future county intakes
+can be checked before publishing scores.
 
 ## Non-goals
 

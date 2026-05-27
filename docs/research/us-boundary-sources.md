@@ -40,7 +40,8 @@ Every boundary unit used in a published score must carry:
 Run `cargo run -p zones-cli -- source-ref-report <plan-input>` before publishing
 county-level score tables; every county record should have source references for
 boundary, representative point, population, legal assignment, and time-zone
-geometry, plus caveats for unresolved split-county status.
+geometry, plus caveats for unresolved split-county status. Treat
+`publishable_source_ref_coverage: false` as a blocker for publication.
 
 ## Representative Point Levels
 

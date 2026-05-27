@@ -60,3 +60,5 @@ In progress.
 - Added `source-ref-report` to summarize source-reference coverage and caveat
   counts for county-shaped inputs before they can graduate from smoke fixture to
   publishable scorecard.
+- Added missing-reference counts and `publishable_source_ref_coverage` to make
+  source-reference QA usable as a pre-publication gate.
