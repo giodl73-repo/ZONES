@@ -223,6 +223,7 @@ pub struct CountyRepresentativePointReport {
 #[serde(rename_all = "kebab-case")]
 pub enum GeometryReconciliationStatus {
     Pending,
+    RepresentativePointMatched,
     Reconciled,
     SplitCounty,
     Mismatch,
@@ -254,6 +255,7 @@ pub struct CountyGeometryReconciliationReport {
     pub source_manifest_id: String,
     pub row_count: usize,
     pub pending_count: usize,
+    pub representative_point_matched_count: usize,
     pub reconciled_count: usize,
     pub split_county_count: usize,
     pub mismatch_count: usize,
@@ -1102,6 +1104,7 @@ impl CountyGeometryReconciliationSet {
             source_manifest_id: self.source_manifest_id.clone(),
             row_count: self.rows.len(),
             pending_count: 0,
+            representative_point_matched_count: 0,
             reconciled_count: 0,
             split_county_count: 0,
             mismatch_count: 0,
@@ -1113,6 +1116,9 @@ impl CountyGeometryReconciliationSet {
             row.validate(manifest)?;
             match row.status {
                 GeometryReconciliationStatus::Pending => report.pending_count += 1,
+                GeometryReconciliationStatus::RepresentativePointMatched => {
+                    report.representative_point_matched_count += 1
+                }
                 GeometryReconciliationStatus::Reconciled => report.reconciled_count += 1,
                 GeometryReconciliationStatus::SplitCounty => report.split_county_count += 1,
                 GeometryReconciliationStatus::Mismatch => report.mismatch_count += 1,
@@ -3472,21 +3478,24 @@ pub fn seed_us_county_seed_geometry_reconciliation() -> CountyGeometryReconcilia
     let rows = seed_us_county_seed_time_zone_assignments()
         .assignments
         .into_iter()
-        .map(|assignment| CountyGeometryReconciliation {
-            unit_id: assignment.unit_id,
-            assignment_zone_id: assignment.zone_id,
-            legal_source_id: assignment.legal_source_id,
-            geometry_source_id: assignment
-                .geometry_source_id
-                .unwrap_or_else(|| "dot-time-zone-map-layer".to_string()),
-            status: GeometryReconciliationStatus::Pending,
-            evidence_note:
-                "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed."
-                    .to_string(),
-            caveats: vec![
-                "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
-                    .to_string(),
-            ],
+        .map(|assignment| {
+            let assignment_zone_id = assignment.zone_id;
+            CountyGeometryReconciliation {
+                unit_id: assignment.unit_id,
+                assignment_zone_id: assignment_zone_id.clone(),
+                legal_source_id: assignment.legal_source_id,
+                geometry_source_id: assignment
+                    .geometry_source_id
+                    .unwrap_or_else(|| "dot-time-zone-map-layer".to_string()),
+                status: GeometryReconciliationStatus::RepresentativePointMatched,
+                evidence_note: format!(
+                    "Seed representative point matched the expected BTS/NTAD Time Zones polygon for {assignment_zone_id} via ArcGIS FeatureServer layer 0."
+                ),
+                caveats: vec![
+                    "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
+                        .to_string(),
+                ],
+            }
         })
         .collect();
 
@@ -5333,7 +5342,8 @@ mod tests {
         );
         let report = reconciliation.report(&seed_source_manifest()).unwrap();
         assert_eq!(report.row_count, 4);
-        assert_eq!(report.pending_count, 4);
+        assert_eq!(report.pending_count, 0);
+        assert_eq!(report.representative_point_matched_count, 4);
         assert_eq!(report.caveated_row_count, 4);
         assert!(!report.geometry_reconciliation_ready);
     }

@@ -77,3 +77,8 @@ In progress.
 - Added `data/source-endpoints/dot-time-zones-arcgis.json` to record the BTS
   Time Zones ArcGIS FeatureServer endpoint, fields, zone rows, license posture,
   and raw-cache caveats for the next geometry join.
+- Used the BTS/NTAD Time Zones FeatureServer to verify the four seed
+  representative points against their expected zone polygons. The geometry gate
+  now reports `representative_point_matched_count: 4`, but remains not ready
+  because representative-point matching is not full county-polygon
+  reconciliation.

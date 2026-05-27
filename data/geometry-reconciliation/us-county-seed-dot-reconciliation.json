@@ -8,10 +8,10 @@
       "assignment_zone_id": "utc-minus-06-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "pending",
-      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "status": "representative-point-matched",
+      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-06-00 via ArcGIS FeatureServer layer 0.",
       "caveats": [
-        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
       ]
     },
     {
@@ -19,10 +19,10 @@
       "assignment_zone_id": "utc-minus-06-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "pending",
-      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "status": "representative-point-matched",
+      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-06-00 via ArcGIS FeatureServer layer 0.",
       "caveats": [
-        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
       ]
     },
     {
@@ -30,10 +30,10 @@
       "assignment_zone_id": "utc-minus-05-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "pending",
-      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "status": "representative-point-matched",
+      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-05-00 via ArcGIS FeatureServer layer 0.",
       "caveats": [
-        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
       ]
     },
     {
@@ -41,10 +41,10 @@
       "assignment_zone_id": "utc-minus-05-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "pending",
-      "evidence_note": "Legal clause evidence is present; DOT geometry-to-county reconciliation is not yet computed.",
+      "status": "representative-point-matched",
+      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-05-00 via ArcGIS FeatureServer layer 0.",
       "caveats": [
-        "Pending DOT geometry reconciliation blocks publication of county-level legal assignment claims."
+        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
       ]
     }
   ]

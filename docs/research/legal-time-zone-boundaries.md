@@ -77,3 +77,8 @@ with `zone` and `utc` fields at
 `https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Time_Zones/FeatureServer/0`.
 Only endpoint metadata is committed; raw geometry belongs in ignored cache until
 the geometry reconciliation step is implemented.
+
+Pulse 03 verifies the four seed representative points against the BTS/NTAD
+Eastern and Central polygons. This is useful evidence that the assigned zone is
+consistent with the point location, but it is not full county-polygon
+reconciliation and does not clear the publication gate.
