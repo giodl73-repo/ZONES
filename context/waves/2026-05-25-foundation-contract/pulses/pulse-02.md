@@ -87,3 +87,5 @@ In progress.
   `target/zones/us-county-baseline-smoke/`: detailed evaluation JSON, unit and
   zone CSVs, offset-fit JSON/CSV, GeoJSON, maps, atlas, and offset candidate
   plan. These are measurement artifacts only and not publication outputs.
+- Added `reviews/pulse-02-role-review.md`. Roles accept the scorecard as a smoke
+  rehearsal, keep publication blocked, and keep the recommendation gate closed.
