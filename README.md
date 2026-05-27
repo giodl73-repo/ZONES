@@ -50,6 +50,7 @@ cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- rplan-context-report
 cargo run -p zones-cli -- county-assignment-report
+cargo run -p zones-cli -- representative-point-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report
@@ -104,6 +105,10 @@ context-hash validation before a national county context is generated.
 current-law assignment evidence smoke fixture. It carries legal source, clause,
 DOT geometry source, status, and caveats per county-shaped unit; the report stays
 not ready while assignments are placeholders.
+`data/representative-points/us-county-smoke-gazetteer.json` is the first
+committed representative-point smoke fixture. It proves the solar-offset
+derivation from longitude and keeps the method exploratory until
+population-center or stronger point evidence is available.
 `data/module-boundaries/zones-rplan-rline.json` records which responsibilities
 belong in ZONES, RPLAN, RLINE, and BISECT reference material.
 

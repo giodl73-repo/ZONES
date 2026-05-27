@@ -42,6 +42,7 @@ fixture-level until a county source intake can produce auditable inputs.
 - `cargo run -p zones-cli -- source-gate-report`
 - `cargo run -p zones-cli -- rplan-context-report`
 - `cargo run -p zones-cli -- county-assignment-report`
+- `cargo run -p zones-cli -- representative-point-report`
 - `cargo run -p zones-cli -- offset-fit`
 - `cargo run -p zones-cli -- write-offset-candidate-plan`
 - `git diff --check`
@@ -75,3 +76,6 @@ In progress.
 - Added `data/legal-assignments/us-county-smoke-current-law.json` and
   `county-assignment-report` to pin the current-law assignment evidence shape
   while clearly keeping smoke placeholder assignments out of publication.
+- Added `data/representative-points/us-county-smoke-gazetteer.json` and
+  `representative-point-report` to pin the point/solar-offset intake shape while
+  marking Census internal points as exploratory rather than strong-claim ready.

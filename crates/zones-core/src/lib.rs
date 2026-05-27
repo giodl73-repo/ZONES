@@ -185,6 +185,40 @@ pub struct CountyTimeZoneAssignmentReport {
     pub assignment_evidence_ready: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CountyRepresentativePointRecord {
+    pub unit_id: String,
+    pub point: RepresentativePoint,
+    pub solar_offset_minutes: f64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CountyRepresentativePointSet {
+    pub point_set_id: String,
+    pub source_manifest_id: String,
+    pub generated_on: String,
+    pub records: Vec<CountyRepresentativePointRecord>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CountyRepresentativePointReport {
+    pub point_set_id: String,
+    pub source_manifest_id: String,
+    pub record_count: usize,
+    pub internal_point_count: usize,
+    pub population_center_count: usize,
+    pub geometry_centroid_count: usize,
+    pub source_provided_count: usize,
+    pub imported_count: usize,
+    pub caveated_record_count: usize,
+    pub caveat_count: usize,
+    pub max_solar_offset_delta_minutes: f64,
+    pub exploratory_point_method: bool,
+    pub strong_claim_point_method_ready: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZonePlanSourceRefReport {
     pub input_id: String,
@@ -864,6 +898,97 @@ impl CountyTimeZoneAssignmentSet {
             && report.geometry_source_ref_count == report.assignment_count
             && report.placeholder_count == 0
             && report.uncertain_count == 0;
+        Ok(report)
+    }
+}
+
+impl CountyRepresentativePointRecord {
+    pub fn validate(&self, manifest: &SourceManifest) -> Result<(), TemporalModelError> {
+        validate_non_empty("county_representative_point.unit_id", &self.unit_id)?;
+        self.point.validate()?;
+        if !manifest
+            .source_ids()
+            .contains(self.point.source_id.as_str())
+        {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_representative_point.source_id",
+                source_id: self.point.source_id.clone(),
+            });
+        }
+        if !self.solar_offset_minutes.is_finite() {
+            return Err(TemporalModelError::InvalidLongitude {
+                longitude: self.solar_offset_minutes.to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl CountyRepresentativePointSet {
+    pub fn report(
+        &self,
+        manifest: &SourceManifest,
+    ) -> Result<CountyRepresentativePointReport, TemporalModelError> {
+        manifest.validate()?;
+        validate_non_empty(
+            "county_representative_point_set.point_set_id",
+            &self.point_set_id,
+        )?;
+        validate_non_empty(
+            "county_representative_point_set.source_manifest_id",
+            &self.source_manifest_id,
+        )?;
+        validate_non_empty(
+            "county_representative_point_set.generated_on",
+            &self.generated_on,
+        )?;
+        if self.source_manifest_id != manifest.manifest_id {
+            return Err(TemporalModelError::UnknownSourceReference {
+                owner_kind: "county_representative_point_set.source_manifest_id",
+                source_id: self.source_manifest_id.clone(),
+            });
+        }
+
+        let mut report = CountyRepresentativePointReport {
+            point_set_id: self.point_set_id.clone(),
+            source_manifest_id: self.source_manifest_id.clone(),
+            record_count: self.records.len(),
+            internal_point_count: 0,
+            population_center_count: 0,
+            geometry_centroid_count: 0,
+            source_provided_count: 0,
+            imported_count: 0,
+            caveated_record_count: 0,
+            caveat_count: 0,
+            max_solar_offset_delta_minutes: 0.0,
+            exploratory_point_method: false,
+            strong_claim_point_method_ready: false,
+        };
+
+        for record in &self.records {
+            record.validate(manifest)?;
+            match record.point.method {
+                RepresentativePointMethod::InternalPoint => report.internal_point_count += 1,
+                RepresentativePointMethod::PopulationCenter => report.population_center_count += 1,
+                RepresentativePointMethod::GeometryCentroid => report.geometry_centroid_count += 1,
+                RepresentativePointMethod::SourceProvided => report.source_provided_count += 1,
+                RepresentativePointMethod::Imported => report.imported_count += 1,
+            }
+            if !record.caveats.is_empty() {
+                report.caveated_record_count += 1;
+                report.caveat_count += record.caveats.len();
+            }
+            let expected = record.point.solar_offset_minutes();
+            report.max_solar_offset_delta_minutes = report
+                .max_solar_offset_delta_minutes
+                .max((record.solar_offset_minutes - expected).abs());
+        }
+
+        report.exploratory_point_method =
+            report.internal_point_count > 0 || report.geometry_centroid_count > 0;
+        report.strong_claim_point_method_ready = report.record_count > 0
+            && report.population_center_count == report.record_count
+            && report.max_solar_offset_delta_minutes < 1e-9;
         Ok(report)
     }
 }
@@ -3134,6 +3259,40 @@ pub fn seed_us_county_smoke_time_zone_assignments() -> CountyTimeZoneAssignmentS
     }
 }
 
+pub fn seed_us_county_smoke_representative_points() -> CountyRepresentativePointSet {
+    let records = vec![
+        ("01001", 32.5, -86.65),
+        ("01003", 30.7, -87.7),
+        ("12001", 29.7, -82.4),
+        ("12003", 30.3, -82.3),
+    ]
+    .into_iter()
+    .map(|(unit_id, latitude, longitude)| {
+        let point = RepresentativePoint {
+            latitude,
+            longitude,
+            method: RepresentativePointMethod::InternalPoint,
+            source_id: "census-county-gazetteer-2024".to_string(),
+        };
+        CountyRepresentativePointRecord {
+            unit_id: unit_id.to_string(),
+            solar_offset_minutes: point.solar_offset_minutes(),
+            point,
+            caveats: vec![
+                "Census internal point is exploratory and not population-weighted.".to_string(),
+            ],
+        }
+    })
+    .collect();
+
+    CountyRepresentativePointSet {
+        point_set_id: "zones-us-county-smoke-representative-points".to_string(),
+        source_manifest_id: "zones-us-foundation-sources".to_string(),
+        generated_on: "2026-05-26".to_string(),
+        records,
+    }
+}
+
 fn validate_inputs(
     units: &[BoundaryUnit],
     adjacency: &[Vec<usize>],
@@ -4660,6 +4819,23 @@ mod tests {
         assert_eq!(report.geometry_source_ref_count, 4);
         assert_eq!(report.placeholder_count, 4);
         assert!(!report.assignment_evidence_ready);
+    }
+
+    #[test]
+    fn committed_county_smoke_representative_points_match_seed_points() {
+        let points: CountyRepresentativePointSet = serde_json::from_str(include_str!(
+            "../../../data/representative-points/us-county-smoke-gazetteer.json"
+        ))
+        .unwrap();
+
+        assert_eq!(points, seed_us_county_smoke_representative_points());
+        let report = points.report(&seed_source_manifest()).unwrap();
+        assert_eq!(report.record_count, 4);
+        assert_eq!(report.internal_point_count, 4);
+        assert_eq!(report.caveated_record_count, 4);
+        assert_eq!(report.max_solar_offset_delta_minutes, 0.0);
+        assert!(report.exploratory_point_method);
+        assert!(!report.strong_claim_point_method_ready);
     }
 
     #[test]

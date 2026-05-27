@@ -7,8 +7,9 @@ use zones_core::{
     evaluate_zone_plan_input_with_manifest_and_catalog, rplan_context_intake_report, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
-    seed_temporal_dataset, seed_us_county_smoke_rplan_context,
-    seed_us_county_smoke_time_zone_assignments, seed_zone_catalog, zone_plan_source_ref_report,
+    seed_temporal_dataset, seed_us_county_smoke_representative_points,
+    seed_us_county_smoke_rplan_context, seed_us_county_smoke_time_zone_assignments,
+    seed_zone_catalog, zone_plan_source_ref_report, CountyRepresentativePointSet,
     CountyTimeZoneAssignmentSet, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
     OffsetMapRenderOptions, OffsetMapView, SourceGatePolicy, SourceLimitationMatrix,
     SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
@@ -164,6 +165,13 @@ enum Command {
     SeedCountyAssignments,
     CountyAssignmentReport {
         #[arg(default_value = "data/legal-assignments/us-county-smoke-current-law.json")]
+        path: PathBuf,
+        #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
+        source_manifest: PathBuf,
+    },
+    SeedRepresentativePoints,
+    RepresentativePointReport {
+        #[arg(default_value = "data/representative-points/us-county-smoke-gazetteer.json")]
         path: PathBuf,
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
@@ -489,6 +497,37 @@ fn main() -> Result<()> {
                     )
                 })?;
             let report = assignments.report(&manifest)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedRepresentativePoints => {
+            let points = seed_us_county_smoke_representative_points();
+            println!("{}", serde_json::to_string_pretty(&points)?);
+        }
+        Command::RepresentativePointReport {
+            path,
+            source_manifest,
+        } => {
+            let point_bytes = fs::read(&path).with_context(|| {
+                format!("failed to read representative points {}", path.display())
+            })?;
+            let points: CountyRepresentativePointSet = serde_json::from_slice(&point_bytes)
+                .with_context(|| {
+                    format!("failed to parse representative points {}", path.display())
+                })?;
+            let source_bytes = fs::read(&source_manifest).with_context(|| {
+                format!(
+                    "failed to read source manifest {}",
+                    source_manifest.display()
+                )
+            })?;
+            let manifest: SourceManifest =
+                serde_json::from_slice(&source_bytes).with_context(|| {
+                    format!(
+                        "failed to parse source manifest {}",
+                        source_manifest.display()
+                    )
+                })?;
+            let report = points.report(&manifest)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
         Command::SeedZoneCatalog => {

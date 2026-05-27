@@ -1,0 +1,59 @@
+{
+  "point_set_id": "zones-us-county-smoke-representative-points",
+  "source_manifest_id": "zones-us-foundation-sources",
+  "generated_on": "2026-05-26",
+  "records": [
+    {
+      "unit_id": "01001",
+      "point": {
+        "latitude": 32.5,
+        "longitude": -86.65,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -346.6,
+      "caveats": [
+        "Census internal point is exploratory and not population-weighted."
+      ]
+    },
+    {
+      "unit_id": "01003",
+      "point": {
+        "latitude": 30.7,
+        "longitude": -87.7,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -350.8,
+      "caveats": [
+        "Census internal point is exploratory and not population-weighted."
+      ]
+    },
+    {
+      "unit_id": "12001",
+      "point": {
+        "latitude": 29.7,
+        "longitude": -82.4,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -329.6,
+      "caveats": [
+        "Census internal point is exploratory and not population-weighted."
+      ]
+    },
+    {
+      "unit_id": "12003",
+      "point": {
+        "latitude": 30.3,
+        "longitude": -82.3,
+        "method": "internal-point",
+        "source_id": "census-county-gazetteer-2024"
+      },
+      "solar_offset_minutes": -329.2,
+      "caveats": [
+        "Census internal point is exploratory and not population-weighted."
+      ]
+    }
+  ]
+}

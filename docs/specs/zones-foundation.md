@@ -187,6 +187,9 @@ and reports whether the context is ready for ZONES scoring.
 `county-assignment-report` validates county current-law time-zone assignment
 evidence. Placeholder or uncertain assignments keep `assignment_evidence_ready`
 false until 49 CFR clauses and DOT geometry are reconciled per unit.
+`representative-point-report` validates county representative points and
+solar-offset derivation. Census internal points remain exploratory until stronger
+population-center or comparable point evidence is available.
 
 ## Research Requirements
 
@@ -230,6 +233,7 @@ cargo run -p zones-cli -- source-ref-report
 cargo run -p zones-cli -- source-gate-report
 cargo run -p zones-cli -- rplan-context-report
 cargo run -p zones-cli -- county-assignment-report
+cargo run -p zones-cli -- representative-point-report
 cargo run -p zones-cli -- zone-catalog-report
 cargo run -p zones-cli -- temporal-dataset-report
 cargo run -p zones-cli -- source-limitation-report

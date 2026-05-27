@@ -59,6 +59,11 @@ ZONES should support at least four representative-point methods:
 | Population-weighted centroid | Main county-level baseline | Required before strong claims |
 | Multi-point population sample | Large/split counties and uncertainty intervals | Required for high-risk cases |
 
+Run `cargo run -p zones-cli -- representative-point-report <point-set>` before
+using representative points for a scorecard. Census internal-point rows are
+acceptable for an exploratory baseline only when every row is caveated and
+`strong_claim_point_method_ready` remains false.
+
 ## Open Work
 
 - Use an RPLAN-produced county context as the preferred intake artifact when it
