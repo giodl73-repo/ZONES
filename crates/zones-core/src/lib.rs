@@ -3293,6 +3293,173 @@ pub fn seed_us_county_smoke_representative_points() -> CountyRepresentativePoint
     }
 }
 
+pub fn build_county_baseline_plan_input(
+    input_id: &str,
+    scenario: ZoneScenario,
+    context: &RplanContext,
+    assignments: &CountyTimeZoneAssignmentSet,
+    representative_points: &CountyRepresentativePointSet,
+    catalog: &ZoneCatalog,
+    caveats: Vec<String>,
+) -> Result<ZonePlanInput, ZonePlanError> {
+    context
+        .validate()
+        .map_err(|err| ZonePlanError::RplanContext(err.to_string()))?;
+    catalog
+        .validate()
+        .map_err(|err| ZonePlanError::ZoneCatalog(err.to_string()))?;
+    validate_non_empty_plan("zone_plan_input.input_id", input_id)?;
+    validate_scenario_shape(&scenario)?;
+    if assignments.source_manifest_id != representative_points.source_manifest_id
+        || assignments.source_manifest_id != catalog.source_manifest_id
+    {
+        return Err(ZonePlanError::SourceManifestMismatch {
+            input_source_manifest_id: assignments.source_manifest_id.clone(),
+            manifest_id: catalog.source_manifest_id.clone(),
+        });
+    }
+    let graph = context
+        .graph
+        .as_ref()
+        .ok_or(ZonePlanError::MissingRplanGraph)?;
+    let populations = context
+        .populations
+        .as_ref()
+        .ok_or(ZonePlanError::MissingRplanPopulations)?;
+
+    let assignments_by_unit = assignments
+        .assignments
+        .iter()
+        .map(|assignment| (assignment.unit_id.as_str(), assignment))
+        .collect::<BTreeMap<_, _>>();
+    let points_by_unit = representative_points
+        .records
+        .iter()
+        .map(|record| (record.unit_id.as_str(), record))
+        .collect::<BTreeMap<_, _>>();
+    let catalog_offsets = catalog
+        .zones
+        .iter()
+        .map(|zone| (zone.id.as_str(), zone.utc_offset_minutes))
+        .collect::<BTreeMap<_, _>>();
+
+    let mut zone_offsets = BTreeMap::new();
+    for assignment in &assignments.assignments {
+        let Some(offset) = catalog_offsets.get(assignment.zone_id.as_str()) else {
+            return Err(ZonePlanError::PlanZoneMissingFromCatalog {
+                zone_id: assignment.zone_id.clone(),
+                catalog_id: catalog.catalog_id.clone(),
+            });
+        };
+        zone_offsets.insert(assignment.zone_id.clone(), *offset);
+    }
+    let zones = zone_offsets
+        .iter()
+        .map(|(zone_id, utc_offset_minutes)| ZoneSpec {
+            id: zone_id.clone(),
+            utc_offset_minutes: *utc_offset_minutes,
+        })
+        .collect::<Vec<_>>();
+    let zone_index_by_id = zones
+        .iter()
+        .enumerate()
+        .map(|(index, zone)| (zone.id.as_str(), index))
+        .collect::<BTreeMap<_, _>>();
+
+    let mut units = Vec::with_capacity(context.units.unit_ids.len());
+    let mut assignment_indices = Vec::with_capacity(context.units.unit_ids.len());
+    for (unit_index, unit_id) in context.units.unit_ids.iter().enumerate() {
+        let population = populations[unit_index];
+        if population < 0 {
+            return Err(ZonePlanError::NegativeRplanPopulation { unit_index });
+        }
+        let assignment = assignments_by_unit.get(unit_id.as_str()).ok_or_else(|| {
+            ZonePlanError::RplanContext(format!(
+                "missing county time-zone assignment for unit {unit_id}"
+            ))
+        })?;
+        let point = points_by_unit.get(unit_id.as_str()).ok_or_else(|| {
+            ZonePlanError::RplanContext(format!("missing representative point for unit {unit_id}"))
+        })?;
+        let zone_index = *zone_index_by_id
+            .get(assignment.zone_id.as_str())
+            .ok_or_else(|| ZonePlanError::PlanZoneMissingFromCatalog {
+                zone_id: assignment.zone_id.clone(),
+                catalog_id: catalog.catalog_id.clone(),
+            })?;
+        assignment_indices.push(zone_index);
+
+        let mut unit_caveats = point.caveats.clone();
+        unit_caveats.extend(assignment.caveats.iter().cloned());
+        units.push(BoundaryUnit {
+            id: unit_id.clone(),
+            name: format!("GEOID {unit_id} baseline smoke unit"),
+            solar_offset_minutes: point.solar_offset_minutes,
+            population: population as u64,
+            map_point: Some(MapPoint {
+                latitude: point.point.latitude,
+                longitude: point.point.longitude,
+                source_id: Some(point.point.source_id.clone()),
+            }),
+            map_geometry: None,
+            source_refs: Some(BoundaryUnitSourceRefs {
+                boundary_source_id: context.units.source_id.clone(),
+                representative_point_source_id: Some(point.point.source_id.clone()),
+                population_source_id: Some("census-county-population-estimates-2024".to_string()),
+                time_zone_assignment_source_id: Some(assignment.legal_source_id.clone()),
+                time_zone_geometry_source_id: assignment.geometry_source_id.clone(),
+                caveats: unit_caveats,
+            }),
+        });
+    }
+
+    let adjacency = graph
+        .adjacency
+        .iter()
+        .map(|edges| edges.iter().map(|edge| edge.to as usize).collect())
+        .collect::<Vec<_>>();
+    let plan = ZonePlan {
+        name: format!("{input_id}-plan"),
+        zones,
+        assignment: assignment_indices.clone(),
+    };
+
+    let input = ZonePlanInput {
+        input_id: input_id.to_string(),
+        source_manifest_id: assignments.source_manifest_id.clone(),
+        scenario,
+        units,
+        adjacency,
+        plan,
+        reference_assignment: assignment_indices,
+        caveats,
+    };
+    evaluate_zone_plan_input(&input)?;
+    Ok(input)
+}
+
+pub fn seed_us_county_baseline_smoke_plan_input() -> ZonePlanInput {
+    build_county_baseline_plan_input(
+        "zones-us-county-baseline-smoke-plan-input",
+        ZoneScenario {
+            scenario_id: "us-county-smoke-current-law-shape".to_string(),
+            kind: ZoneScenarioKind::CurrentLaw,
+            label: "US county smoke current-law baseline input".to_string(),
+            authority_source_id: Some("dot-49-cfr-71".to_string()),
+        },
+        &seed_us_county_smoke_rplan_context(),
+        &seed_us_county_smoke_time_zone_assignments(),
+        &seed_us_county_smoke_representative_points(),
+        &seed_zone_catalog(),
+        vec![
+            "Baseline smoke input assembled from RPLAN context, assignment, and representative-point smoke fixtures.".to_string(),
+            "Current-law assignment evidence remains placeholder and is not publication-ready.".to_string(),
+            "Representative points are Census internal points and remain exploratory.".to_string(),
+        ],
+    )
+    .unwrap()
+}
+
 fn validate_inputs(
     units: &[BoundaryUnit],
     adjacency: &[Vec<usize>],
@@ -5216,6 +5383,29 @@ mod tests {
         assert_eq!(report.unit_count, 4);
         assert_eq!(report.zone_count, 2);
         assert!(report.all_zones_connected);
+    }
+
+    #[test]
+    fn committed_county_baseline_smoke_plan_matches_seed_input() {
+        let input: ZonePlanInput = serde_json::from_str(include_str!(
+            "../../../data/plan-inputs/us-county-baseline-smoke.json"
+        ))
+        .unwrap();
+
+        assert_eq!(input, seed_us_county_baseline_smoke_plan_input());
+        let report = evaluate_zone_plan_input_with_manifest_and_catalog(
+            &input,
+            &seed_source_manifest(),
+            &seed_zone_catalog(),
+        )
+        .unwrap();
+        let source_ref_report =
+            zone_plan_source_ref_report(&input, &seed_source_manifest()).unwrap();
+
+        assert_eq!(report.unit_count, 4);
+        assert_eq!(report.zone_count, 2);
+        assert!(report.all_zones_connected);
+        assert!(source_ref_report.publishable_source_ref_coverage);
     }
 
     #[test]

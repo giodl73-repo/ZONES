@@ -7,12 +7,13 @@ use zones_core::{
     evaluate_zone_plan_input_with_manifest_and_catalog, rplan_context_intake_report, seed_fixture,
     seed_module_boundary_contract, seed_plan_input, seed_plan_input_with_map_points,
     seed_source_gate_policy, seed_source_limitation_matrix, seed_source_manifest,
-    seed_temporal_dataset, seed_us_county_smoke_representative_points,
-    seed_us_county_smoke_rplan_context, seed_us_county_smoke_time_zone_assignments,
-    seed_zone_catalog, zone_plan_source_ref_report, CountyRepresentativePointSet,
-    CountyTimeZoneAssignmentSet, GeometryJoinOptions, ModuleBoundaryContract, OffsetCandidateGrid,
-    OffsetMapRenderOptions, OffsetMapView, SourceGatePolicy, SourceLimitationMatrix,
-    SourceManifest, TemporalDataset, ZoneCatalog, ZonePlanInput,
+    seed_temporal_dataset, seed_us_county_baseline_smoke_plan_input,
+    seed_us_county_smoke_representative_points, seed_us_county_smoke_rplan_context,
+    seed_us_county_smoke_time_zone_assignments, seed_zone_catalog, zone_plan_source_ref_report,
+    CountyRepresentativePointSet, CountyTimeZoneAssignmentSet, GeometryJoinOptions,
+    ModuleBoundaryContract, OffsetCandidateGrid, OffsetMapRenderOptions, OffsetMapView,
+    SourceGatePolicy, SourceLimitationMatrix, SourceManifest, TemporalDataset, ZoneCatalog,
+    ZonePlanInput,
 };
 
 #[derive(Debug, Parser)]
@@ -176,6 +177,7 @@ enum Command {
         #[arg(long, default_value = "data/source-manifests/us-foundation.json")]
         source_manifest: PathBuf,
     },
+    SeedCountyBaselinePlanInput,
     SeedZoneCatalog,
     ZoneCatalogReport {
         #[arg(default_value = "data/zone-catalogs/seed-offsets.json")]
@@ -529,6 +531,10 @@ fn main() -> Result<()> {
                 })?;
             let report = points.report(&manifest)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::SeedCountyBaselinePlanInput => {
+            let input = seed_us_county_baseline_smoke_plan_input();
+            println!("{}", serde_json::to_string_pretty(&input)?);
         }
         Command::SeedZoneCatalog => {
             let catalog = seed_zone_catalog();

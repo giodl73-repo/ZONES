@@ -62,6 +62,7 @@ cargo run -p zones-cli -- write-offset-atlas
 cargo run -p zones-cli -- write-offset-geojson
 cargo run -p zones-cli -- write-offset-candidate-plan
 cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-smoke.json
+cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-smoke.json
 cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json
 ```
 
@@ -140,6 +141,10 @@ fixture. It uses GEOID-shaped ids and explicit caveats to prove the evaluator
 contract without claiming a source-derived national county scorecard. Its
 per-unit `source_refs` fields make boundary, point, population, time-zone
 assignment, geometry, and split-county caveats machine-readable.
+`data/plan-inputs/us-county-baseline-smoke.json` is assembled from the committed
+RPLAN context, current-law assignment evidence, representative-point fixture, and
+zone catalog. It proves the baseline input assembly path while remaining a smoke
+fixture because legal assignments and point methods are not strong-claim ready.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.

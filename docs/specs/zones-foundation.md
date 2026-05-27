@@ -190,6 +190,9 @@ false until 49 CFR clauses and DOT geometry are reconciled per unit.
 `representative-point-report` validates county representative points and
 solar-offset derivation. Census internal points remain exploratory until stronger
 population-center or comparable point evidence is available.
+The baseline plan input assembly path must combine RPLAN context units,
+current-law assignment evidence, representative points, and zone catalog offsets
+into a `ZonePlanInput` with complete per-unit `source_refs`.
 
 ## Research Requirements
 
@@ -244,6 +247,7 @@ cargo run -p zones-cli -- write-offset-maps
 cargo run -p zones-cli -- write-offset-atlas
 cargo run -p zones-cli -- write-offset-geojson
 cargo run -p zones-cli -- write-offset-candidate-plan
+cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-smoke.json
 git diff --check
 ```
 

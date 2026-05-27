@@ -96,5 +96,6 @@ cargo run -p zones-cli -- write-offset-maps
 cargo run -p zones-cli -- write-offset-atlas
 cargo run -p zones-cli -- write-offset-geojson
 cargo run -p zones-cli -- write-offset-candidate-plan
+cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-smoke.json
 git diff --check
 ```

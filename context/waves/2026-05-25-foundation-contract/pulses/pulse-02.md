@@ -36,6 +36,7 @@ fixture-level until a county source intake can produce auditable inputs.
 - `cargo fmt --check`
 - `cargo test --workspace`
 - `cargo run -p zones-cli -- evaluate-plan`
+- `cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-smoke.json`
 - `cargo run -p zones-cli -- evaluate-plan-detail`
 - `cargo run -p zones-cli -- source-report`
 - `cargo run -p zones-cli -- source-ref-report data/plan-inputs/us-county-smoke.json`
@@ -79,3 +80,6 @@ In progress.
 - Added `data/representative-points/us-county-smoke-gazetteer.json` and
   `representative-point-report` to pin the point/solar-offset intake shape while
   marking Census internal points as exploratory rather than strong-claim ready.
+- Added `data/plan-inputs/us-county-baseline-smoke.json` to prove baseline plan
+  input assembly from the RPLAN context, assignment evidence, representative
+  points, and zone catalog.
