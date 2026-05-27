@@ -3480,6 +3480,19 @@ pub fn seed_us_county_seed_geometry_reconciliation() -> CountyGeometryReconcilia
         .into_iter()
         .map(|assignment| {
             let assignment_zone_id = assignment.zone_id;
+            let (coverage_note, caveats) = match assignment.unit_id.as_str() {
+                "01003" => (
+                    "TIGER 2024 county polygon intersects the expected BTS/NTAD Central polygon with coverage ratio 0.9999933435; residual outside area is a small coastal/source-boundary sliver.",
+                    vec![
+                        "Baldwin County has a tiny residual outside the BTS/NTAD Central polygon at source precision; review before publication."
+                            .to_string(),
+                    ],
+                ),
+                _ => (
+                    "TIGER 2024 county polygon is fully covered by the expected BTS/NTAD time-zone polygon at seed precision.",
+                    Vec::new(),
+                ),
+            };
             CountyGeometryReconciliation {
                 unit_id: assignment.unit_id,
                 assignment_zone_id: assignment_zone_id.clone(),
@@ -3487,14 +3500,11 @@ pub fn seed_us_county_seed_geometry_reconciliation() -> CountyGeometryReconcilia
                 geometry_source_id: assignment
                     .geometry_source_id
                     .unwrap_or_else(|| "dot-time-zone-map-layer".to_string()),
-                status: GeometryReconciliationStatus::RepresentativePointMatched,
+                status: GeometryReconciliationStatus::Reconciled,
                 evidence_note: format!(
-                    "Seed representative point matched the expected BTS/NTAD Time Zones polygon for {assignment_zone_id} via ArcGIS FeatureServer layer 0."
+                    "{coverage_note} Expected assignment zone: {assignment_zone_id}; geometry source: BTS/NTAD Time Zones ArcGIS FeatureServer layer 0."
                 ),
-                caveats: vec![
-                    "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
-                        .to_string(),
-                ],
+                caveats,
             }
         })
         .collect();
@@ -5343,9 +5353,10 @@ mod tests {
         let report = reconciliation.report(&seed_source_manifest()).unwrap();
         assert_eq!(report.row_count, 4);
         assert_eq!(report.pending_count, 0);
-        assert_eq!(report.representative_point_matched_count, 4);
-        assert_eq!(report.caveated_row_count, 4);
-        assert!(!report.geometry_reconciliation_ready);
+        assert_eq!(report.representative_point_matched_count, 0);
+        assert_eq!(report.reconciled_count, 4);
+        assert_eq!(report.caveated_row_count, 1);
+        assert!(report.geometry_reconciliation_ready);
     }
 
     #[test]

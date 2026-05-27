@@ -156,8 +156,8 @@ four-county set; those counties have no boundary adjacencies among themselves, s
 the seed report is intentionally disconnected. DOT geometry reconciliation is
 still pending.
 `data/geometry-reconciliation/us-county-seed-dot-reconciliation.json` tracks DOT
-geometry reconciliation as a separate publication gate; the seed remains blocked
-while rows are only representative-point matches.
+geometry reconciliation as a separate publication gate; the seed rows are
+polygon-reconciled, with a source-precision caveat on Baldwin County.
 `data/source-endpoints/dot-time-zones-arcgis.json` records the BTS/NTAD Time
 Zones ArcGIS FeatureServer endpoint and query shape for the next reconciliation
 step without committing raw geometry.

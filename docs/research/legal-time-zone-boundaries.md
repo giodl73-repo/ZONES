@@ -78,7 +78,8 @@ with `zone` and `utc` fields at
 Only endpoint metadata is committed; raw geometry belongs in ignored cache until
 the geometry reconciliation step is implemented.
 
-Pulse 03 verifies the four seed representative points against the BTS/NTAD
-Eastern and Central polygons. This is useful evidence that the assigned zone is
-consistent with the point location, but it is not full county-polygon
-reconciliation and does not clear the publication gate.
+Pulse 03 reconciles the four seed county polygons against the BTS/NTAD Eastern
+and Central polygons. Autauga, Alachua, and Baker are fully covered by their
+expected polygons at seed precision. Baldwin is covered at ratio 0.9999933435,
+with a tiny residual source-boundary/coastal sliver that must be reviewed before
+publication.

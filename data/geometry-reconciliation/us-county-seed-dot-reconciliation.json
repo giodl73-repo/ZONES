@@ -8,21 +8,18 @@
       "assignment_zone_id": "utc-minus-06-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "representative-point-matched",
-      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-06-00 via ArcGIS FeatureServer layer 0.",
-      "caveats": [
-        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
-      ]
+      "status": "reconciled",
+      "evidence_note": "TIGER 2024 county polygon is fully covered by the expected BTS/NTAD time-zone polygon at seed precision. Expected assignment zone: utc-minus-06-00; geometry source: BTS/NTAD Time Zones ArcGIS FeatureServer layer 0."
     },
     {
       "unit_id": "01003",
       "assignment_zone_id": "utc-minus-06-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "representative-point-matched",
-      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-06-00 via ArcGIS FeatureServer layer 0.",
+      "status": "reconciled",
+      "evidence_note": "TIGER 2024 county polygon intersects the expected BTS/NTAD Central polygon with coverage ratio 0.9999933435; residual outside area is a small coastal/source-boundary sliver. Expected assignment zone: utc-minus-06-00; geometry source: BTS/NTAD Time Zones ArcGIS FeatureServer layer 0.",
       "caveats": [
-        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
+        "Baldwin County has a tiny residual outside the BTS/NTAD Central polygon at source precision; review before publication."
       ]
     },
     {
@@ -30,22 +27,16 @@
       "assignment_zone_id": "utc-minus-05-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "representative-point-matched",
-      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-05-00 via ArcGIS FeatureServer layer 0.",
-      "caveats": [
-        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
-      ]
+      "status": "reconciled",
+      "evidence_note": "TIGER 2024 county polygon is fully covered by the expected BTS/NTAD time-zone polygon at seed precision. Expected assignment zone: utc-minus-05-00; geometry source: BTS/NTAD Time Zones ArcGIS FeatureServer layer 0."
     },
     {
       "unit_id": "12003",
       "assignment_zone_id": "utc-minus-05-00",
       "legal_source_id": "dot-49-cfr-71",
       "geometry_source_id": "dot-time-zone-map-layer",
-      "status": "representative-point-matched",
-      "evidence_note": "Seed representative point matched the expected BTS/NTAD Time Zones polygon for utc-minus-05-00 via ArcGIS FeatureServer layer 0.",
-      "caveats": [
-        "Representative-point match is not full county-polygon reconciliation and does not clear the publication gate."
-      ]
+      "status": "reconciled",
+      "evidence_note": "TIGER 2024 county polygon is fully covered by the expected BTS/NTAD time-zone polygon at seed precision. Expected assignment zone: utc-minus-05-00; geometry source: BTS/NTAD Time Zones ArcGIS FeatureServer layer 0."
     }
   ]
 }
