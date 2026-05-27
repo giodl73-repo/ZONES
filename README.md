@@ -150,7 +150,10 @@ source-derived seed input. It replaces approximate point and population
 placeholders with Census Gazetteer internal points and 2024 county population
 estimates for the four seed units, and it replaces placeholder legal assignment
 rows with 49 CFR clause-cited seed evidence for Alabama and Florida counties.
-It still caveats smoke adjacency and pending DOT geometry reconciliation.
+It also replaces smoke adjacency with TIGER-derived adjacency for the selected
+four-county set; those counties have no boundary adjacencies among themselves, so
+the seed report is intentionally disconnected. DOT geometry reconciliation is
+still pending.
 `source-ref-report` summarizes that per-unit source-reference coverage, missing
 reference counts, and caveat coverage so smoke fixtures and future county intakes
 can be checked before publishing scores.

@@ -69,6 +69,11 @@ The Pulse 03 four-county seed uses Census 2024 Gazetteer internal points and
 they do not make the seed publishable while adjacency and legal assignments
 remain smoke/placeholder layers.
 
+The Pulse 03 four-county seed also uses TIGER-derived adjacency for the selected
+county set. The selected counties do not share county-boundary edges with each
+other, so the seed graph has zero adjacency edges and current-zone contiguity is
+expected to fail. This is a seed-fixture property, not a national-baseline claim.
+
 ## Open Work
 
 - Use an RPLAN-produced county context as the preferred intake artifact when it

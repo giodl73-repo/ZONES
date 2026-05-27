@@ -66,5 +66,9 @@ In progress.
   with clause-cited 49 CFR evidence:
   - Alabama seed counties cite `49 CFR 71.5(e); 49 CFR 71.6(a)` for central time.
   - Florida seed counties cite `49 CFR 71.4; 49 CFR 71.5(f)` for eastern time.
-- The seed still uses smoke adjacency and still needs county-level DOT geometry
-  reconciliation, so it remains blocked from publication.
+- Replaced smoke adjacency with TIGER-derived adjacency for the four seed
+  counties. The selected counties have no boundary adjacencies among themselves,
+  so the seed current-plan report correctly has zero boundary edges and
+  disconnected zones.
+- The seed still needs county-level DOT geometry reconciliation, so it remains
+  blocked from publication.

@@ -1,6 +1,6 @@
 {
   "rctx_version": "0.1",
-  "context_hash": "sha256:d10e322924200ad136ccdfba8a0a312fbbba46f28a9ad85d9b8157082202fb79",
+  "context_hash": "sha256:814dc3702f1de719bac49967bba3ea40e34a77d1d118c606c07c369cd6c5b229",
   "units": {
     "unit_kind": "county",
     "year": 2024,
@@ -17,44 +17,10 @@
   "graph": {
     "edge_semantics": "undirected",
     "adjacency": [
-      [
-        {
-          "to": 1,
-          "kind": "boundary",
-          "weight": 1.0
-        }
-      ],
-      [
-        {
-          "to": 0,
-          "kind": "boundary",
-          "weight": 1.0
-        },
-        {
-          "to": 2,
-          "kind": "boundary",
-          "weight": 1.0
-        }
-      ],
-      [
-        {
-          "to": 1,
-          "kind": "boundary",
-          "weight": 1.0
-        },
-        {
-          "to": 3,
-          "kind": "boundary",
-          "weight": 1.0
-        }
-      ],
-      [
-        {
-          "to": 2,
-          "kind": "boundary",
-          "weight": 1.0
-        }
-      ]
+      [],
+      [],
+      [],
+      []
     ]
   },
   "populations": [
@@ -69,6 +35,6 @@
   },
   "source_hashes": {
     "census-county-population-estimates-2024": "sha256:abcc8720d669e793bbfdcd440eeec37a78db3b452adbe4ccd1eadf7c72b522b9",
-    "census-tiger-counties-2024": "sha256:0a121d136b434e3ae749d053db19dfbacbb56eebf30335cfa5031388803b4451"
+    "census-tiger-counties-2024": "sha256:04e668d3502757c837c13444730547cd967f28a2c49aeffb873d1792ab2cb97b"
   }
 }

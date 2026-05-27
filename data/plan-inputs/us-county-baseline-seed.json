@@ -98,20 +98,10 @@
     }
   ],
   "adjacency": [
-    [
-      1
-    ],
-    [
-      0,
-      2
-    ],
-    [
-      1,
-      3
-    ],
-    [
-      2
-    ]
+    [],
+    [],
+    [],
+    []
   ],
   "plan": {
     "name": "zones-us-county-baseline-seed-plan-input-plan",
@@ -141,7 +131,7 @@
   "caveats": [
     "Baseline seed input uses source-derived Census Gazetteer points and 2024 county population estimates for four county-shaped rows.",
     "Current-law assignment evidence cites 49 CFR clauses for the four seed counties but still needs county-level DOT geometry reconciliation before publication.",
-    "RPLAN adjacency remains the Pulse 02 smoke adjacency until TIGER-derived county adjacency lands.",
+    "RPLAN adjacency is TIGER-derived for the four seed counties; no boundary adjacencies exist among this selected set.",
     "Representative points are Census internal points and remain exploratory."
   ]
 }

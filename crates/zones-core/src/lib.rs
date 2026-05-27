@@ -3202,10 +3202,14 @@ pub fn seed_us_county_smoke_rplan_context() -> RplanContext {
 
 pub fn seed_us_county_seed_rplan_context() -> RplanContext {
     let mut context = seed_us_county_smoke_rplan_context();
+    context.graph = Some(UnitGraph {
+        edge_semantics: EdgeSemantics::Undirected,
+        adjacency: vec![vec![], vec![], vec![], vec![]],
+    });
     context.populations = Some(vec![61_464, 261_608, 291_782, 29_325]);
     context.source_hashes.entries.insert(
         "census-tiger-counties-2024".to_string(),
-        "sha256:0a121d136b434e3ae749d053db19dfbacbb56eebf30335cfa5031388803b4451".to_string(),
+        "sha256:04e668d3502757c837c13444730547cd967f28a2c49aeffb873d1792ab2cb97b".to_string(),
     );
     context.source_hashes.entries.insert(
         "census-county-population-estimates-2024".to_string(),
@@ -3580,7 +3584,7 @@ pub fn seed_us_county_baseline_seed_plan_input() -> ZonePlanInput {
         vec![
             "Baseline seed input uses source-derived Census Gazetteer points and 2024 county population estimates for four county-shaped rows.".to_string(),
             "Current-law assignment evidence cites 49 CFR clauses for the four seed counties but still needs county-level DOT geometry reconciliation before publication.".to_string(),
-            "RPLAN adjacency remains the Pulse 02 smoke adjacency until TIGER-derived county adjacency lands.".to_string(),
+            "RPLAN adjacency is TIGER-derived for the four seed counties; no boundary adjacencies exist among this selected set.".to_string(),
             "Representative points are Census internal points and remain exploratory.".to_string(),
         ],
     )
@@ -5109,6 +5113,7 @@ mod tests {
         assert_eq!(context, seed_us_county_seed_rplan_context());
         let report = rplan_context_intake_report(&context).unwrap();
         assert_eq!(report.unit_count, 4);
+        assert_eq!(report.graph_edge_count, 0);
         assert_eq!(report.population_count, 4);
         assert_eq!(report.source_hash_count, 2);
         assert!(report.context_hash_matches);
@@ -5604,7 +5609,7 @@ mod tests {
 
         assert_eq!(report.unit_count, 4);
         assert_eq!(report.zone_count, 2);
-        assert!(report.all_zones_connected);
+        assert!(!report.all_zones_connected);
         assert!(report.weighted_mean_absolute_error_minutes > 0.0);
         assert!(source_ref_report.publishable_source_ref_coverage);
     }
