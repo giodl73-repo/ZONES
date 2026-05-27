@@ -28,6 +28,9 @@ Useful source URLs:
 - Treat current law, proposed legislation, and analytic counterfactuals as
   separate regimes.
 - Store the legal source at the assignment level, not only at the dataset level.
+- In county-shaped plan inputs, use `source_refs.time_zone_assignment_source_id`
+  for legal assignment evidence and `source_refs.time_zone_geometry_source_id`
+  for reconciled map or polygon evidence.
 - Do not infer county assignment solely from an internal point when a legal
   boundary crosses the county.
 - For DST scoring, attach observance as an offset rule, not as a separate

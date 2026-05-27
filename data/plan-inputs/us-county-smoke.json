@@ -17,6 +17,17 @@
         "latitude": 32.5,
         "longitude": -86.65,
         "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "County time-zone assignment is a placeholder until 49 CFR Part 71 clauses and DOT geometry are reconciled.",
+          "Split-county status is not reviewed in the smoke fixture."
+        ]
       }
     },
     {
@@ -28,6 +39,17 @@
         "latitude": 30.7,
         "longitude": -87.7,
         "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "County time-zone assignment is a placeholder until 49 CFR Part 71 clauses and DOT geometry are reconciled.",
+          "Split-county status is not reviewed in the smoke fixture."
+        ]
       }
     },
     {
@@ -39,6 +61,17 @@
         "latitude": 29.7,
         "longitude": -82.4,
         "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "County time-zone assignment is a placeholder until 49 CFR Part 71 clauses and DOT geometry are reconciled.",
+          "Split-county status is not reviewed in the smoke fixture."
+        ]
       }
     },
     {
@@ -50,6 +83,17 @@
         "latitude": 30.3,
         "longitude": -82.3,
         "source_id": "census-county-gazetteer-2024"
+      },
+      "source_refs": {
+        "boundary_source_id": "census-tiger-counties-2024",
+        "representative_point_source_id": "census-county-gazetteer-2024",
+        "population_source_id": "census-county-population-estimates-2024",
+        "time_zone_assignment_source_id": "dot-49-cfr-71",
+        "time_zone_geometry_source_id": "dot-time-zone-map-layer",
+        "caveats": [
+          "County time-zone assignment is a placeholder until 49 CFR Part 71 clauses and DOT geometry are reconciled.",
+          "Split-county status is not reviewed in the smoke fixture."
+        ]
       }
     }
   ],

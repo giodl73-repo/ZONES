@@ -115,7 +115,9 @@ the same offset-fit reports and maps.
 coordinate-aware map rendering.
 `data/plan-inputs/us-county-smoke.json` is the first county-shaped intake smoke
 fixture. It uses GEOID-shaped ids and explicit caveats to prove the evaluator
-contract without claiming a source-derived national county scorecard.
+contract without claiming a source-derived national county scorecard. Its
+per-unit `source_refs` fields make boundary, point, population, time-zone
+assignment, geometry, and split-county caveats machine-readable.
 
 ## Non-goals
 

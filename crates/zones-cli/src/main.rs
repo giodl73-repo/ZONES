@@ -609,14 +609,26 @@ fn write_unit_scores_csv(path: &PathBuf, scores: &[zones_core::ZoneUnitScore]) -
             .with_context(|| format!("failed to create output directory {}", parent.display()))?;
     }
     let mut csv = String::from(
-        "unit_id,unit_name,zone_id,reference_zone_id,moved_from_reference,population,solar_offset_minutes,zone_utc_offset_minutes,absolute_error_minutes\n",
+        "unit_id,unit_name,zone_id,time_zone_assignment_source_id,unit_source_caveats,reference_zone_id,moved_from_reference,population,solar_offset_minutes,zone_utc_offset_minutes,absolute_error_minutes\n",
     );
     for score in scores {
+        let assignment_source_id = score
+            .source_refs
+            .as_ref()
+            .and_then(|source_refs| source_refs.time_zone_assignment_source_id.as_deref())
+            .unwrap_or("");
+        let unit_source_caveats = score
+            .source_refs
+            .as_ref()
+            .map(|source_refs| source_refs.caveats.join("; "))
+            .unwrap_or_default();
         csv.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{},{},{}\n",
             csv_cell(&score.unit_id),
             csv_cell(&score.unit_name),
             csv_cell(&score.zone_id),
+            csv_cell(assignment_source_id),
+            csv_cell(&unit_source_caveats),
             csv_cell(score.reference_zone_id.as_deref().unwrap_or("")),
             score
                 .moved_from_reference

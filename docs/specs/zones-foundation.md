@@ -98,6 +98,9 @@ The portable JSON plan-input contract contains:
 - `source_manifest_id`;
 - `scenario`, including id, kind, label, and optional authority source id;
 - `units`, each with id, name, solar offset, and population;
+- optional per-unit `source_refs` for boundary, representative point,
+  population, time-zone assignment, time-zone geometry, and unit-specific
+  caveats;
 - `adjacency`, as zero-based unit-index neighbors;
 - `plan`, with zone specs and one assignment index per unit;
 - `reference_assignment`, optionally naming the current/baseline zone index for

@@ -26,10 +26,14 @@ Every boundary unit used in a published score must carry:
 
 - stable unit id, preferably Census GEOID for US counties;
 - display name and parent jurisdiction;
-- boundary vintage and source URL;
-- representative point method;
-- adjacency source and build date;
-- population source and vintage when population-weighted scoring is used;
+- boundary vintage and source URL, represented in plan inputs by
+  `source_refs.boundary_source_id`;
+- representative point method and source, represented by
+  `source_refs.representative_point_source_id`;
+- adjacency source and build date, either through an RPLAN context or an
+  equivalent ZONES source reference;
+- population source and vintage when population-weighted scoring is used,
+  represented by `source_refs.population_source_id`;
 - any known split between legal time-zone boundary and chosen administrative
   unit.
 

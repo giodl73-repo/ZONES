@@ -53,3 +53,6 @@ In progress.
   and explicit caveats rather than claiming source-derived legal assignments.
 - Extended the US foundation source manifest with the selected Census population
   source and DOT geospatial map layer needed by county intake.
+- Added per-unit `source_refs` so county-shaped inputs can cite boundary,
+  representative point, population, legal assignment, and time-zone geometry
+  sources, with split-county caveats carried into detailed score output.

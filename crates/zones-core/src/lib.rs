@@ -1035,6 +1035,22 @@ impl MapGeometry {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BoundaryUnitSourceRefs {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boundary_source_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub representative_point_source_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub population_source_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_zone_assignment_source_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_zone_geometry_source_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub caveats: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoundaryUnit {
     pub id: String,
     pub name: String,
@@ -1044,6 +1060,8 @@ pub struct BoundaryUnit {
     pub map_point: Option<MapPoint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub map_geometry: Option<MapGeometry>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_refs: Option<BoundaryUnitSourceRefs>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1159,6 +1177,8 @@ pub struct ZoneUnitScore {
     pub unit_id: String,
     pub unit_name: String,
     pub zone_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_refs: Option<BoundaryUnitSourceRefs>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reference_zone_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1396,6 +1416,12 @@ pub enum ZonePlanError {
     #[error("scenario {scenario_id} references unknown authority source {source_id}")]
     UnknownScenarioAuthoritySource {
         scenario_id: String,
+        source_id: String,
+    },
+    #[error("unit {unit_id} {field} references unknown source {source_id}")]
+    UnknownUnitSourceReference {
+        unit_id: String,
+        field: &'static str,
         source_id: String,
     },
     #[error("zone catalog validation failed: {0}")]
@@ -2248,7 +2274,7 @@ fn validate_input_manifest_pair(
         });
     }
     validate_scenario_against_manifest(&input.scenario, manifest)?;
-    Ok(())
+    validate_unit_source_refs(input, manifest)
 }
 
 fn validate_scenario_shape(scenario: &ZoneScenario) -> Result<(), ZonePlanError> {
@@ -2278,6 +2304,69 @@ fn validate_scenario_against_manifest(
                 source_id: source_id.clone(),
             });
         }
+    }
+    Ok(())
+}
+
+fn validate_unit_source_refs(
+    input: &ZonePlanInput,
+    manifest: &SourceManifest,
+) -> Result<(), ZonePlanError> {
+    let source_ids = manifest.source_ids();
+    for unit in &input.units {
+        let Some(source_refs) = &unit.source_refs else {
+            continue;
+        };
+        validate_optional_unit_source_ref(
+            &unit.id,
+            "boundary_source_id",
+            source_refs.boundary_source_id.as_deref(),
+            &source_ids,
+        )?;
+        validate_optional_unit_source_ref(
+            &unit.id,
+            "representative_point_source_id",
+            source_refs.representative_point_source_id.as_deref(),
+            &source_ids,
+        )?;
+        validate_optional_unit_source_ref(
+            &unit.id,
+            "population_source_id",
+            source_refs.population_source_id.as_deref(),
+            &source_ids,
+        )?;
+        validate_optional_unit_source_ref(
+            &unit.id,
+            "time_zone_assignment_source_id",
+            source_refs.time_zone_assignment_source_id.as_deref(),
+            &source_ids,
+        )?;
+        validate_optional_unit_source_ref(
+            &unit.id,
+            "time_zone_geometry_source_id",
+            source_refs.time_zone_geometry_source_id.as_deref(),
+            &source_ids,
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_optional_unit_source_ref(
+    unit_id: &str,
+    field: &'static str,
+    source_id: Option<&str>,
+    source_ids: &BTreeSet<&str>,
+) -> Result<(), ZonePlanError> {
+    let Some(source_id) = source_id else {
+        return Ok(());
+    };
+    validate_non_empty_plan(field, source_id)?;
+    if !source_ids.contains(source_id) {
+        return Err(ZonePlanError::UnknownUnitSourceReference {
+            unit_id: unit_id.to_string(),
+            field,
+            source_id: source_id.to_string(),
+        });
     }
     Ok(())
 }
@@ -2339,6 +2428,7 @@ fn score_units(
                 unit_id: unit.id.clone(),
                 unit_name: unit.name.clone(),
                 zone_id: zone.id.clone(),
+                source_refs: unit.source_refs.clone(),
                 reference_zone_id,
                 moved_from_reference,
                 population: unit.population,
@@ -2388,6 +2478,7 @@ pub fn evaluate_rplan_zone_context(
             population: population as u64,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         });
     }
     let adjacency = graph
@@ -2558,6 +2649,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             population: 100,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         },
         BoundaryUnit {
             id: "west-b".to_string(),
@@ -2566,6 +2658,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             population: 80,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         },
         BoundaryUnit {
             id: "east-a".to_string(),
@@ -2574,6 +2667,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             population: 90,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         },
         BoundaryUnit {
             id: "east-b".to_string(),
@@ -2582,6 +2676,7 @@ pub fn seed_fixture() -> (Vec<BoundaryUnit>, Vec<Vec<usize>>, ZonePlan) {
             population: 70,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         },
     ];
     let adjacency = vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]];
@@ -3371,6 +3466,28 @@ mod tests {
     }
 
     #[test]
+    fn unit_source_refs_must_exist_in_manifest() {
+        let mut input = seed_plan_input();
+        input.units[0].source_refs = Some(BoundaryUnitSourceRefs {
+            boundary_source_id: Some("missing-source".to_string()),
+            representative_point_source_id: None,
+            population_source_id: None,
+            time_zone_assignment_source_id: None,
+            time_zone_geometry_source_id: None,
+            caveats: vec![],
+        });
+
+        assert_eq!(
+            evaluate_zone_plan_input_with_manifest(&input, &seed_source_manifest()),
+            Err(ZonePlanError::UnknownUnitSourceReference {
+                unit_id: "west-a".to_string(),
+                field: "boundary_source_id",
+                source_id: "missing-source".to_string(),
+            })
+        );
+    }
+
+    #[test]
     fn counterfactual_scenario_does_not_require_authority_source() {
         let mut input = seed_plan_input();
         input.scenario.kind = ZoneScenarioKind::AnalyticCounterfactual;
@@ -3654,6 +3771,7 @@ mod tests {
             population: 100,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         }];
         let adjacency = vec![vec![]];
         let plan = ZonePlan {
@@ -3680,6 +3798,7 @@ mod tests {
             population: 100,
             map_point: None,
             map_geometry: None,
+            source_refs: None,
         }];
         let adjacency = vec![vec![]];
         let plan = ZonePlan {
@@ -4081,6 +4200,15 @@ mod tests {
         .unwrap();
 
         assert_eq!(input.input_id, "zones-us-county-smoke-plan-input");
+        let source_refs = input.units[0].source_refs.as_ref().unwrap();
+        assert_eq!(
+            source_refs.time_zone_assignment_source_id.as_deref(),
+            Some("dot-49-cfr-71")
+        );
+        assert_eq!(
+            source_refs.time_zone_geometry_source_id.as_deref(),
+            Some("dot-time-zone-map-layer")
+        );
         assert_eq!(report.unit_count, 4);
         assert_eq!(report.zone_count, 2);
         assert!(report.all_zones_connected);
