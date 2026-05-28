@@ -477,7 +477,7 @@ fn main() -> Result<()> {
             let index_path = output_dir.join("index.html");
             fs::write(
                 &index_path,
-                render_offset_candidate_maps_index_html(&input, &packet_links),
+                render_offset_candidate_maps_index_html(&input, &comparison, &packet_links),
             )
             .with_context(|| format!("failed to write {}", index_path.display()))?;
             println!("{}", output_dir.display());
@@ -984,6 +984,7 @@ fn baseline_packet_slug(input: &ZonePlanInput) -> &'static str {
 
 fn render_offset_candidate_maps_index_html(
     input: &ZonePlanInput,
+    comparison: &zones_core::CandidateComparisonReport,
     packet_links: &[(String, String, String)],
 ) -> String {
     let mut cards = String::new();
@@ -1027,6 +1028,23 @@ main {{
   padding: 12px 14px;
   margin: 18px 0;
 }}
+table {{
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 0.95rem;
+}}
+th, td {{
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  text-align: right;
+}}
+th:first-child, td:first-child {{
+  text-align: left;
+}}
+th {{
+  background: #f1f5f9;
+}}
 li {{
   margin: 10px 0;
 }}
@@ -1038,6 +1056,10 @@ li {{
 <p>Input <code>{}</code>. Scenario: <strong>{}</strong> (<code>{}</code>). These maps compare the supplied baseline and generated offset-grid counterfactuals for internal measurement.</p>
 <div class="gate"><strong>Recommendation gate closed.</strong> Candidate maps are not preferred maps, enactment advice, or publication-ready national claims.</div>
 <p><a href="candidate-comparison.json">Candidate comparison JSON</a></p>
+<h2>Comparison summary</h2>
+<p>Weighted error is mean absolute local-solar offset error under the supplied input weights. Negative deltas mean less error than the supplied baseline, not a recommendation.</p>
+{}
+<h2>Packet links</h2>
 <ul>
 {}
 </ul>
@@ -1049,8 +1071,57 @@ li {{
         html_escape(&input.input_id),
         html_escape(&input.scenario.label),
         html_escape(scenario_kind_label(&input.scenario.kind)),
+        render_candidate_comparison_table(comparison),
         cards
     )
+}
+
+fn render_candidate_comparison_table(comparison: &zones_core::CandidateComparisonReport) -> String {
+    let mut rows = String::new();
+    rows.push_str(&format!(
+        "<tr><td>{}</td><td>{:.3}</td><td>&mdash;</td><td>{:.3}</td><td>{}</td><td>{}</td></tr>\n",
+        html_escape(&comparison.baseline.plan_name),
+        comparison.baseline.weighted_mean_absolute_error_minutes,
+        comparison.baseline.max_absolute_error_minutes,
+        optional_usize_cell(comparison.baseline.moved_unit_count),
+        optional_u64_cell(comparison.baseline.moved_population)
+    ));
+    for candidate in &comparison.candidates {
+        rows.push_str(&format!(
+            "<tr><td>{}</td><td>{:.3}</td><td>{:+.3}</td><td>{:.3}</td><td>{}</td><td>{}</td></tr>\n",
+            html_escape(&candidate.label),
+            candidate
+                .plan_report
+                .weighted_mean_absolute_error_minutes,
+            candidate.weighted_error_delta_minutes,
+            candidate.plan_report.max_absolute_error_minutes,
+            candidate.moved_unit_count,
+            candidate.moved_population
+        ));
+    }
+    format!(
+        r#"<table>
+<thead>
+<tr><th>Option</th><th>Weighted error min</th><th>Delta min</th><th>Max error min</th><th>Moved units</th><th>Moved population</th></tr>
+</thead>
+<tbody>
+{}
+</tbody>
+</table>"#,
+        rows
+    )
+}
+
+fn optional_usize_cell(value: Option<usize>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "&mdash;".to_string())
+}
+
+fn optional_u64_cell(value: Option<u64>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "&mdash;".to_string())
 }
 
 fn scenario_kind_label(kind: &ZoneScenarioKind) -> &'static str {
@@ -1217,5 +1288,32 @@ fn csv_cell(value: &str) -> String {
         format!("\"{}\"", value.replace('"', "\"\""))
     } else {
         value.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn candidate_packet_index_renders_comparison_summary() {
+        let input = seed_plan_input();
+        let comparison =
+            compare_offset_candidate_plans(&input, &[OffsetCandidateGrid::WholeHour]).unwrap();
+        let html = render_offset_candidate_maps_index_html(
+            &input,
+            &comparison,
+            &[(
+                "Current-law baseline".to_string(),
+                "current-law/atlas/index.html".to_string(),
+                "current-law/offset-fit.geojson".to_string(),
+            )],
+        );
+
+        assert!(html.contains("<h2>Comparison summary</h2>"));
+        assert!(html.contains("Weighted error min"));
+        assert!(html.contains("whole-hour candidate offset grid"));
+        assert!(html.contains("Negative deltas mean less error"));
+        assert!(html.contains("Recommendation gate closed"));
     }
 }

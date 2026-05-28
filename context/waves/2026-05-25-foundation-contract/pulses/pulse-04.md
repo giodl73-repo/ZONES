@@ -90,3 +90,7 @@ In progress.
   national exploratory packet now shows plausible option deltas instead of
   inflated comparison errors, and comparison caveats now follow the supplied
   scenario instead of hard-coding the four-county seed scope.
+- Added a comparison-summary table to the candidate packet index so local review
+  can see baseline and candidate weighted-error, moved-unit, and moved-population
+  metrics without opening the JSON first. The table text keeps lower-error
+  deltas framed as measurements, not recommendations.
