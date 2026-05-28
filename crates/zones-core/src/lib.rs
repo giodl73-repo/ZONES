@@ -2524,17 +2524,29 @@ pub fn build_offset_candidate_plan(
     validate_scenario_shape(&input.scenario)?;
     validate_inputs(&input.units, &input.adjacency, &input.plan)?;
 
-    let mut zone_index_by_offset = BTreeMap::new();
-    let mut assignment = Vec::with_capacity(input.units.len());
-    for unit in &input.units {
-        let (offset, _) = best_candidate_offset(unit.solar_offset_minutes, grid.step_minutes());
-        let next_index = zone_index_by_offset.len();
-        let zone_index = *zone_index_by_offset.entry(offset).or_insert(next_index);
-        assignment.push(zone_index);
-    }
+    let candidate_offsets = input
+        .units
+        .iter()
+        .map(|unit| best_candidate_offset(unit.solar_offset_minutes, grid.step_minutes()).0)
+        .collect::<Vec<_>>();
+    let zone_offsets = candidate_offsets
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let zone_index_by_offset = zone_offsets
+        .iter()
+        .enumerate()
+        .map(|(index, offset)| (*offset, index))
+        .collect::<BTreeMap<_, _>>();
+    let assignment = candidate_offsets
+        .iter()
+        .map(|offset| zone_index_by_offset[offset])
+        .collect::<Vec<_>>();
 
-    let zones = zone_index_by_offset
-        .into_keys()
+    let zones = zone_offsets
+        .into_iter()
         .map(|offset| ZoneSpec {
             id: offset_zone_id(offset),
             utc_offset_minutes: offset,
@@ -2593,13 +2605,35 @@ pub fn compare_offset_candidate_plans(
         source_manifest_id: input.source_manifest_id.clone(),
         baseline,
         candidates,
-        caveats: vec![
-            "Analytic counterfactual comparison only; not a recommendation.".to_string(),
-            "Seed scope is four counties and is not a national baseline.".to_string(),
-            "Representative points are Census internal points and remain exploratory.".to_string(),
-        ],
+        caveats: candidate_comparison_caveats(input),
         recommendation_gate_closed: true,
     })
+}
+
+fn candidate_comparison_caveats(input: &ZonePlanInput) -> Vec<String> {
+    let mut caveats = vec![
+        "Analytic counterfactual comparison only; not a recommendation.".to_string(),
+        "Comparison scope, weighting, adjacency, and source limits follow the supplied input."
+            .to_string(),
+    ];
+    if input.scenario.kind != ZoneScenarioKind::CurrentLaw {
+        caveats.push(format!(
+            "Supplied baseline scenario is {} (`{}`), not current law.",
+            input.scenario.label,
+            scenario_kind_slug(&input.scenario.kind)
+        ));
+    }
+    caveats.extend(input.caveats.iter().cloned());
+    caveats
+}
+
+fn scenario_kind_slug(kind: &ZoneScenarioKind) -> &'static str {
+    match kind {
+        ZoneScenarioKind::CurrentLaw => "current-law",
+        ZoneScenarioKind::HistoricalLaw => "historical-law",
+        ZoneScenarioKind::ProposedScenario => "proposed-scenario",
+        ZoneScenarioKind::AnalyticCounterfactual => "analytic-counterfactual",
+    }
 }
 
 fn moved_from_baseline_zone_ids(
@@ -5245,6 +5279,34 @@ mod tests {
     }
 
     #[test]
+    fn offset_candidate_plan_assignment_matches_sorted_zone_offsets() {
+        let mut input = seed_plan_input();
+        input.units.reverse();
+        input.adjacency.reverse();
+
+        let candidate = build_offset_candidate_plan(&input, OffsetCandidateGrid::WholeHour)
+            .expect("candidate should build from reversed units");
+
+        assert_eq!(
+            candidate
+                .plan
+                .zones
+                .iter()
+                .map(|zone| zone.utc_offset_minutes)
+                .collect::<Vec<_>>(),
+            vec![-360, -300]
+        );
+        for (unit_index, unit) in input.units.iter().enumerate() {
+            let assigned_zone = &candidate.plan.zones[candidate.plan.assignment[unit_index]];
+            let (expected_offset, _) = best_candidate_offset(
+                unit.solar_offset_minutes,
+                OffsetCandidateGrid::WholeHour.step_minutes(),
+            );
+            assert_eq!(assigned_zone.utc_offset_minutes, expected_offset);
+        }
+    }
+
+    #[test]
     fn offset_candidate_comparison_reports_tradeoffs() {
         let report = compare_offset_candidate_plans(
             &seed_us_county_baseline_seed_plan_input(),
@@ -5265,6 +5327,31 @@ mod tests {
         assert_eq!(report.candidates[0].moved_population, 0);
         assert!(report.candidates[1].moved_population > 0);
         assert!(report.candidates[2].weighted_error_delta_minutes < 0.0);
+    }
+
+    #[test]
+    fn offset_candidate_comparison_caveats_follow_input_scenario() {
+        let mut input = seed_plan_input();
+        input.scenario.kind = ZoneScenarioKind::AnalyticCounterfactual;
+        input.scenario.authority_source_id = None;
+        input.scenario.label = "Synthetic analytic baseline".to_string();
+        input.caveats.push("Custom input scope caveat.".to_string());
+
+        let report =
+            compare_offset_candidate_plans(&input, &[OffsetCandidateGrid::WholeHour]).unwrap();
+
+        assert!(report
+            .caveats
+            .iter()
+            .any(|caveat| caveat.contains("not current law")));
+        assert!(report
+            .caveats
+            .iter()
+            .any(|caveat| caveat == "Custom input scope caveat."));
+        assert!(!report
+            .caveats
+            .iter()
+            .any(|caveat| caveat.contains("Seed scope is four counties")));
     }
 
     #[test]

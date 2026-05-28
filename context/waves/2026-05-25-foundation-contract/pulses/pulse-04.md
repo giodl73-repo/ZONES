@@ -85,3 +85,8 @@ In progress.
   and renders a full-national exploratory candidate map packet. The packet keeps
   the recommendation gate closed and is explicitly not current law, legal advice,
   a population-weighted scorecard, or a publication-ready national claim.
+- Fixed candidate-plan assignment generation so units still point to the correct
+  UTC offsets after candidate zones are sorted for deterministic output. The
+  national exploratory packet now shows plausible option deltas instead of
+  inflated comparison errors, and comparison caveats now follow the supplied
+  scenario instead of hard-coding the four-county seed scope.
