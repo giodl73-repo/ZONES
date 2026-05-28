@@ -94,3 +94,6 @@ In progress.
   can see baseline and candidate weighted-error, moved-unit, and moved-population
   metrics without opening the JSON first. The table text keeps lower-error
   deltas framed as measurements, not recommendations.
+- Added inline SVG previews to the candidate packet index so the baseline and
+  each generated option can be visually inspected from the top-level packet page,
+  while atlas links still expose the complete view set.

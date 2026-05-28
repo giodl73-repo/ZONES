@@ -455,6 +455,7 @@ fn main() -> Result<()> {
                 baseline_label,
                 format!("{baseline_slug}/atlas/index.html"),
                 format!("{baseline_slug}/offset-fit.geojson"),
+                format!("{baseline_slug}/maps/current-standard.svg"),
             ));
 
             for grid in grids {
@@ -471,6 +472,7 @@ fn main() -> Result<()> {
                     label,
                     format!("{slug}/atlas/index.html"),
                     format!("{slug}/offset-fit.geojson"),
+                    format!("{slug}/maps/current-standard.svg"),
                 ));
             }
 
@@ -985,15 +987,24 @@ fn baseline_packet_slug(input: &ZonePlanInput) -> &'static str {
 fn render_offset_candidate_maps_index_html(
     input: &ZonePlanInput,
     comparison: &zones_core::CandidateComparisonReport,
-    packet_links: &[(String, String, String)],
+    packet_links: &[(String, String, String, String)],
 ) -> String {
     let mut cards = String::new();
-    for (label, atlas_path, geojson_path) in packet_links {
+    for (label, atlas_path, geojson_path, preview_path) in packet_links {
         cards.push_str(&format!(
-            "<li><strong>{}</strong>: <a href=\"{}\">atlas</a> | <a href=\"{}\">GeoJSON</a></li>\n",
+            r#"<article class="preview-card">
+<h3>{}</h3>
+<a href="{}"><img src="{}" alt="{} standard-time offset error map preview" loading="lazy"></a>
+<p><a href="{}">atlas</a> | <a href="{}">GeoJSON</a> | <a href="{}">SVG preview</a></p>
+</article>
+"#,
             html_escape(label),
             html_escape(atlas_path),
-            html_escape(geojson_path)
+            html_escape(preview_path),
+            html_escape(label),
+            html_escape(atlas_path),
+            html_escape(geojson_path),
+            html_escape(preview_path)
         ));
     }
     format!(
@@ -1045,6 +1056,30 @@ th:first-child, td:first-child {{
 th {{
   background: #f1f5f9;
 }}
+.preview-grid {{
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin: 18px 0;
+}}
+.preview-card {{
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 12px;
+}}
+.preview-card h3 {{
+  margin: 0 0 10px;
+  font-size: 1rem;
+}}
+.preview-card img {{
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+}}
 li {{
   margin: 10px 0;
 }}
@@ -1059,10 +1094,11 @@ li {{
 <h2>Comparison summary</h2>
 <p>Weighted error is mean absolute local-solar offset error under the supplied input weights. Negative deltas mean less error than the supplied baseline, not a recommendation.</p>
 {}
-<h2>Packet links</h2>
-<ul>
+<h2>Map previews</h2>
+<p>Preview images show each packet's standard-time offset-error SVG. Open the atlas links for the full view set, including DST-period and nearest-offset comparison maps.</p>
+<div class="preview-grid">
 {}
-</ul>
+</div>
 <p>Each packet includes <code>plan-input.json</code>, <code>offset-fit.json</code>, <code>offset-fit.geojson</code>, SVG maps, and a local atlas page.</p>
 </main>
 </body>
@@ -1307,12 +1343,16 @@ mod tests {
                 "Current-law baseline".to_string(),
                 "current-law/atlas/index.html".to_string(),
                 "current-law/offset-fit.geojson".to_string(),
+                "current-law/maps/current-standard.svg".to_string(),
             )],
         );
 
         assert!(html.contains("<h2>Comparison summary</h2>"));
+        assert!(html.contains("<h2>Map previews</h2>"));
         assert!(html.contains("Weighted error min"));
         assert!(html.contains("whole-hour candidate offset grid"));
+        assert!(html.contains("current-law/maps/current-standard.svg"));
+        assert!(html.contains("loading=\"lazy\""));
         assert!(html.contains("Negative deltas mean less error"));
         assert!(html.contains("Recommendation gate closed"));
     }

@@ -134,7 +134,8 @@ the whole-hour, half-hour, and quarter-hour candidate grids. Each option gets a
 plan input, offset-fit JSON, GeoJSON, SVG maps, and an atlas page under
 `target/zones/` by default; the packet index keeps the recommendation gate
 closed and includes a comparison-summary table with baseline and candidate
-weighted-error, moved-unit, and moved-population metrics. Pass
+weighted-error, moved-unit, and moved-population metrics plus inline SVG
+previews for quick visual inspection. Pass
 `--geojson <FeatureCollection>` to join boundary geometry before
 rendering, so SVG maps draw filled unit polygons instead of point markers when
 geometry is available.
