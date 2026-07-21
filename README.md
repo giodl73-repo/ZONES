@@ -2,13 +2,15 @@
 
 **Time-zone redistricting along real civic boundaries.**
 
+**Clock borders should be explainable in sunlight, geography, and civic boundaries.**
+
 ZONES is a civic-design and optimization project for proposing better time-zone
 maps. It treats counties, states, provinces, or similar administrative units as
 graph nodes, scores how far each unit's clock is from local solar time, and then
 searches for contiguous zone plans that reduce avoidable clock error without
 cutting across recognizable government boundaries.
 
-**Series:** Applied Systems.
+**Series:** [Applied Systems](https://github.com/giodl73-repo/giodl73-repo/blob/main/series/applied-systems.md)
 
 ## Why ZONES
 
@@ -17,6 +19,9 @@ accident. Some places keep clock time that is visibly misaligned with local
 sunrise, noon, and sunset. ZONES makes that mismatch measurable, then asks a
 redistricting-style question: what zone boundaries would be more accurate if
 they had to follow state, county, or equivalent boundaries?
+
+The transferable principle is: **optimize a public boundary against measurable
+error without pretending the metric is the whole policy decision.**
 
 ## Method
 
@@ -38,7 +43,18 @@ they had to follow state, county, or equivalent boundaries?
 - [`research/RESEARCH.md`](research/RESEARCH.md) tracks what is known, unknown,
   and publishable as the evidence base grows.
 
-## First command
+## Quick start
+
+Start with the fixture, inspect its evidence gates, then generate the first
+candidate comparison:
+
+```powershell
+cargo run -p zones-cli -- seed-report
+cargo run -p zones-cli -- source-gate-report
+cargo run -p zones-cli -- compare-offset-candidates
+```
+
+## Command reference
 
 ```powershell
 cargo run -p zones-cli -- seed-report
