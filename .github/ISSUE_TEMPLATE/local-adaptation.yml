@@ -1,0 +1,35 @@
+name: Local adaptation proposal
+description: Propose a bounded ZONES civic-time boundary review.
+title: "Local adaptation: "
+labels: ["adoption", "evidence-needed"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for bounded ZONES work. Public reuse does not create a legal, regulatory, statutory, endorsement, referendum, or implementation claim.
+  - type: input
+    id: scope
+    attributes:
+      label: Bounded scope
+      placeholder: "Example: county-level current-law offset review for one state"
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Civil-time metric question
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Source surfaces
+      description: Legal assignment, boundary geometry, adjacency, representative point, population, or policy references.
+    validations:
+      required: true
+  - type: textarea
+    id: held
+    attributes:
+      label: Claims that must stay held
+    validations:
+      required: true

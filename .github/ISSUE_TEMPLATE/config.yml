@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: ZONES open adoption guide
+    url: https://github.com/giodl73-repo/ZONES/blob/master/docs/adoption/README.md
+    about: Start here before proposing a civic-time boundary adaptation.

@@ -12,6 +12,17 @@ cutting across recognizable government boundaries.
 
 **Series:** [Applied Systems](https://github.com/giodl73-repo/giodl73-repo/blob/main/series/applied-systems.md)
 
+## Use ZONES
+
+ZONES is public and open to use as a reference model, civic-boundary scoring
+system, research corpus, map-generation fixture, or local adaptation starting
+point.
+
+If you want to apply it to a state, province, country, county-level plan,
+current-law review, or civil-time policy question, start with
+[`docs/adoption/README.md`](docs/adoption/README.md). It lays out safe reuse,
+first adaptation steps, reviewer targets, and claim boundaries.
+
 ## Why ZONES
 
 Modern time-zone borders are a mix of geography, law, history, politics, and
