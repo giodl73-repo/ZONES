@@ -254,7 +254,7 @@ cargo run -p zones-cli -- write-offset-candidate-plan data/plan-inputs/us-county
 ZONES depends on `rplan-core` for portable legal-boundary unit graph/context
 contracts and `rgraph-core` for boundary and contiguity metrics. Future waves
 should consider `ropt-core` for candidate search, FLETCH for source acquisition,
-MDLOOM for report validation, CROP/MDPORT for portable evidence records, and ROLES
+MDLOOM for report validation, MDCROP/MDPORT for portable evidence records, and ROLES
 for domain review panels. BISECT remains the reference implementation for proven
 Census/TIGER/GEOID handling; reusable boundary packages should flow through
 RPLAN rather than through BISECT application internals.
