@@ -45,6 +45,21 @@ current-law review, or civil-time policy question, start with
 [`docs/adoption/README.md`](docs/adoption/README.md). It lays out safe reuse,
 first adaptation steps, reviewer targets, and claim boundaries.
 
+## Portfolio reuse posture
+
+ZONES is open for reference review and bounded local adaptation, but it is
+intentionally a specialist civic-policy product rather than a shared portfolio
+dependency. The draft adoption guide describes how to reproduce the method
+without turning an exploratory score into legal or operational advice; it is
+not a versioned crate, schema, or dataset contract, and no downstream manifest
+currently records direct ZONES adoption.
+
+ZONES keeps civil-time scoring, source gates, legal-assignment evidence,
+candidate plans, and publication claims local. Reusable graph and boundary
+primitives flow through RPLAN and RLINE. A future direct dependency requires an
+explicit versioned surface, a pinned downstream manifest, and consumer-owned
+compatibility and claim-boundary tests.
+
 ## Why ZONES
 
 Modern time-zone borders are a mix of geography, law, history, politics, and
