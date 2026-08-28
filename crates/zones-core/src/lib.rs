@@ -1337,12 +1337,12 @@ impl RepresentativePoint {
     }
 
     pub fn validate(&self) -> Result<(), TemporalModelError> {
-        if !self.latitude.is_finite() || self.latitude < -90.0 || self.latitude > 90.0 {
+        if !self.latitude.is_finite() || !(-90.0..=90.0).contains(&self.latitude) {
             return Err(TemporalModelError::InvalidLatitude {
                 latitude: self.latitude.to_string(),
             });
         }
-        if !self.longitude.is_finite() || self.longitude < -180.0 || self.longitude > 180.0 {
+        if !self.longitude.is_finite() || !(-180.0..=180.0).contains(&self.longitude) {
             return Err(TemporalModelError::InvalidLongitude {
                 longitude: self.longitude.to_string(),
             });
@@ -2763,6 +2763,17 @@ pub fn render_offset_fit_svg(
         ));
     }
 
+    let svg_transform = SvgTransform {
+        min_x,
+        max_x,
+        out_min_x: left,
+        out_max_x: left + plot_width,
+        min_y,
+        max_y,
+        out_min_y: top + plot_height,
+        out_max_y: top,
+    };
+
     for (index, score) in report.unit_scores.iter().enumerate() {
         let point = &points[index];
         let x = scale(point.x, min_x, max_x, left, left + plot_width);
@@ -2772,17 +2783,7 @@ pub fn render_offset_fit_svg(
         let offset = offset_map_offset(score, view);
         let color = error_color(error, max_error);
         if let Some(geometry) = &score.map_geometry {
-            let path = map_geometry_to_svg_path(
-                geometry,
-                min_x,
-                max_x,
-                left,
-                left + plot_width,
-                min_y,
-                max_y,
-                top + plot_height,
-                top,
-            );
+            let path = map_geometry_to_svg_path(geometry, &svg_transform);
             svg.push_str(&format!(
                 "<path d=\"{}\" fill=\"{color}\" fill-opacity=\"0.86\" stroke=\"#0f172a\" stroke-width=\"1.2\" fill-rule=\"evenodd\">\n<title>{}: offset {}, error {:.1} min</title>\n</path>\n",
                 path,
@@ -2992,8 +2993,7 @@ fn coordinate_rings_to_json(rings: &[Vec<[f64; 2]>]) -> String {
     format!("[{ring_json}]")
 }
 
-fn map_geometry_to_svg_path(
-    geometry: &MapGeometry,
+struct SvgTransform {
     min_x: f64,
     max_x: f64,
     out_min_x: f64,
@@ -3002,47 +3002,57 @@ fn map_geometry_to_svg_path(
     max_y: f64,
     out_min_y: f64,
     out_max_y: f64,
-) -> String {
+}
+
+fn map_geometry_to_svg_path(geometry: &MapGeometry, transform: &SvgTransform) -> String {
     match geometry {
         MapGeometry::Point(point) => {
-            let x = scale(point[0], min_x, max_x, out_min_x, out_max_x);
-            let y = scale(point[1], min_y, max_y, out_min_y, out_max_y);
+            let x = scale(
+                point[0],
+                transform.min_x,
+                transform.max_x,
+                transform.out_min_x,
+                transform.out_max_x,
+            );
+            let y = scale(
+                point[1],
+                transform.min_y,
+                transform.max_y,
+                transform.out_min_y,
+                transform.out_max_y,
+            );
             format!("M {x:.2} {y:.2}")
         }
-        MapGeometry::Polygon(rings) => coordinate_rings_to_svg_path(
-            rings, min_x, max_x, out_min_x, out_max_x, min_y, max_y, out_min_y, out_max_y,
-        ),
+        MapGeometry::Polygon(rings) => coordinate_rings_to_svg_path(rings, transform),
         MapGeometry::MultiPolygon(polygons) => polygons
             .iter()
-            .map(|rings| {
-                coordinate_rings_to_svg_path(
-                    rings, min_x, max_x, out_min_x, out_max_x, min_y, max_y, out_min_y, out_max_y,
-                )
-            })
+            .map(|rings| coordinate_rings_to_svg_path(rings, transform))
             .collect::<Vec<_>>()
             .join(" "),
     }
 }
 
-fn coordinate_rings_to_svg_path(
-    rings: &[Vec<[f64; 2]>],
-    min_x: f64,
-    max_x: f64,
-    out_min_x: f64,
-    out_max_x: f64,
-    min_y: f64,
-    max_y: f64,
-    out_min_y: f64,
-    out_max_y: f64,
-) -> String {
+fn coordinate_rings_to_svg_path(rings: &[Vec<[f64; 2]>], transform: &SvgTransform) -> String {
     rings
         .iter()
         .filter(|ring| !ring.is_empty())
         .map(|ring| {
             let mut commands = String::new();
             for (index, point) in ring.iter().enumerate() {
-                let x = scale(point[0], min_x, max_x, out_min_x, out_max_x);
-                let y = scale(point[1], min_y, max_y, out_min_y, out_max_y);
+                let x = scale(
+                    point[0],
+                    transform.min_x,
+                    transform.max_x,
+                    transform.out_min_x,
+                    transform.out_max_x,
+                );
+                let y = scale(
+                    point[1],
+                    transform.min_y,
+                    transform.max_y,
+                    transform.out_min_y,
+                    transform.out_max_y,
+                );
                 if index == 0 {
                     commands.push_str(&format!("M {x:.2} {y:.2}"));
                 } else {
@@ -4029,13 +4039,13 @@ fn validate_inputs(
     }
     for unit in units {
         if let Some(point) = &unit.map_point {
-            if !point.latitude.is_finite() || point.latitude < -90.0 || point.latitude > 90.0 {
+            if !point.latitude.is_finite() || !(-90.0..=90.0).contains(&point.latitude) {
                 return Err(ZonePlanError::InvalidMapLatitude {
                     unit_id: unit.id.clone(),
                     latitude: point.latitude.to_string(),
                 });
             }
-            if !point.longitude.is_finite() || point.longitude < -180.0 || point.longitude > 180.0 {
+            if !point.longitude.is_finite() || !(-180.0..=180.0).contains(&point.longitude) {
                 return Err(ZonePlanError::InvalidMapLongitude {
                     unit_id: unit.id.clone(),
                     longitude: point.longitude.to_string(),
@@ -4046,13 +4056,13 @@ fn validate_inputs(
             for point in map_geometry_points(geometry) {
                 let longitude = point[0];
                 let latitude = point[1];
-                if !latitude.is_finite() || latitude < -90.0 || latitude > 90.0 {
+                if !latitude.is_finite() || !(-90.0..=90.0).contains(&latitude) {
                     return Err(ZonePlanError::InvalidMapLatitude {
                         unit_id: unit.id.clone(),
                         latitude: latitude.to_string(),
                     });
                 }
-                if !longitude.is_finite() || longitude < -180.0 || longitude > 180.0 {
+                if !longitude.is_finite() || !(-180.0..=180.0).contains(&longitude) {
                     return Err(ZonePlanError::InvalidMapLongitude {
                         unit_id: unit.id.clone(),
                         longitude: longitude.to_string(),
