@@ -32,17 +32,20 @@ struct Cli {
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum CandidateGridArg {
-    WholeHour,
-    HalfHour,
-    QuarterHour,
+    #[value(name = "whole-hour")]
+    Whole,
+    #[value(name = "half-hour")]
+    Half,
+    #[value(name = "quarter-hour")]
+    Quarter,
 }
 
 impl From<CandidateGridArg> for OffsetCandidateGrid {
     fn from(value: CandidateGridArg) -> Self {
         match value {
-            CandidateGridArg::WholeHour => Self::WholeHour,
-            CandidateGridArg::HalfHour => Self::HalfHour,
-            CandidateGridArg::QuarterHour => Self::QuarterHour,
+            CandidateGridArg::Whole => Self::WholeHour,
+            CandidateGridArg::Half => Self::HalfHour,
+            CandidateGridArg::Quarter => Self::QuarterHour,
         }
     }
 }
@@ -112,7 +115,7 @@ enum Command {
     WriteOffsetCandidatePlan {
         #[arg(default_value = "data/plan-inputs/seed-plan.json")]
         path: PathBuf,
-        #[arg(long, value_enum, default_value_t = CandidateGridArg::HalfHour)]
+        #[arg(long, value_enum, default_value_t = CandidateGridArg::Half)]
         grid: CandidateGridArg,
         #[arg(long, default_value = "target/zones/offset-candidate-plan.json")]
         output: PathBuf,
@@ -239,7 +242,26 @@ enum Command {
     },
 }
 
+const CLI_STACK_SIZE: usize = 8 * 1024 * 1024;
+
 fn main() -> Result<()> {
+    std::thread::Builder::new()
+        .name("zones-cli".to_string())
+        .stack_size(CLI_STACK_SIZE)
+        .spawn(run_cli)?
+        .join()
+        .map_err(|panic| {
+            if let Some(message) = panic.downcast_ref::<&str>() {
+                anyhow::anyhow!("zones-cli thread panicked: {message}")
+            } else if let Some(message) = panic.downcast_ref::<String>() {
+                anyhow::anyhow!("zones-cli thread panicked: {message}")
+            } else {
+                anyhow::anyhow!("zones-cli thread panicked")
+            }
+        })?
+}
+
+fn run_cli() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Status => {
