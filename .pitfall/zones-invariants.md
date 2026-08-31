@@ -66,3 +66,21 @@ target/zones/us-county-baseline-seed/candidate-maps`.
 renderer code, not only passing unit tests.
 
 **Test:** `cargo clippy --workspace --all-targets -- -D warnings`.
+
+## ZONES-I-06: Public Authority Boundaries Are Machine-Checked
+
+**Claim:** Candidate recommendation, national-baseline, and solar-objective
+risks are encoded as a versioned authority-boundary contract and parsed by
+repo-local tests.
+
+**Status:** VERIFIED
+
+**Why it matters:** ZONES can produce polished maps and concrete score deltas
+before it has legal authority, complete source coverage, public preference, or
+implementation tradeoff evidence. The strongest outputs need equally explicit
+negative authority.
+
+**Test:** `crates/zones-cli/tests/pitfall_policy.rs` parses
+`docs/authority-boundaries.v1.json` and verifies the forbidden claims,
+required upgrade evidence, and required visible tradeoffs for `ZONES-PF-01`,
+`ZONES-PF-02`, and `ZONES-PF-03`.

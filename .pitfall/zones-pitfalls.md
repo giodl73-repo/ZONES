@@ -2,7 +2,7 @@
 
 ## ZONES-PF-01: Candidate Score Becomes Time-Zone Recommendation
 
-**Status:** OPEN
+**Status:** MITIGATED
 
 **Pattern:** A lower-error candidate grid, map packet, or comparison table is
 described as the preferred, best, or ready-to-adopt time-zone plan.
@@ -34,11 +34,12 @@ public communication gates are ready.
 concrete improvements, so recommendation language can slip in even when the
 gate is closed.
 
-**Structural solution:** Keep recommendation-gate language in generated packet
-indexes and require civil-time, source, optimization, and public-map review
-before any preferred-map claim.
+**Structural solution:** Keep the authority-boundary contract and
+recommendation-gate language in generated packet indexes, and require
+civil-time, source, optimization, and public-map review before any
+preferred-map claim.
 
-**Evidence:** `.roles/ROLE.md`,
+**Evidence:** `docs/authority-boundaries.v1.json`, `.roles/ROLE.md`,
 `context/waves/2026-05-25-foundation-contract/pulses/pulse-04.md`, and
 `cargo run -p zones-cli -- write-offset-candidate-maps
 data/plan-inputs/us-county-baseline-seed.json --output-dir
@@ -48,7 +49,7 @@ target/zones/us-county-baseline-seed/candidate-maps`.
 
 ## ZONES-PF-02: Source-Derived Seed Becomes National Baseline
 
-**Status:** OPEN
+**Status:** MITIGATED
 
 **Pattern:** The four-county source-derived seed, boundary-backed local maps,
 or exploratory national visual packet is presented as a national current-law
@@ -79,11 +80,11 @@ readiness.
 complete source references, so it can sound stronger than its four-county
 scope.
 
-**Structural solution:** Preserve seed scope, exploratory point-method caveats,
-and source-gate evidence until the national county context and legal assignment
-baseline are complete.
+**Structural solution:** Preserve the authority-boundary contract, seed scope,
+exploratory point-method caveats, and source-gate evidence until the national
+county context and legal assignment baseline are complete.
 
-**Evidence:** `README.md`, `research/TRACKING.md`,
+**Evidence:** `docs/authority-boundaries.v1.json`, `README.md`, `research/TRACKING.md`,
 `data/plan-inputs/us-county-baseline-seed.json`, and
 `cargo run -p zones-cli -- source-ref-report
 data/plan-inputs/us-county-baseline-seed.json`.
@@ -92,7 +93,7 @@ data/plan-inputs/us-county-baseline-seed.json`.
 
 ## ZONES-PF-03: Solar Error Becomes Whole Policy Objective
 
-**Status:** OPEN
+**Status:** MITIGATED
 
 **Pattern:** Solar-time fit is optimized or summarized without naming
 convenience-of-commerce, disruption, public preference, legal process, or
@@ -124,10 +125,11 @@ public-map editor.
 **Detection difficulty:** Solar offset is the clearest first metric, so it can
 dominate language before the DOT convenience layer exists.
 
-**Structural solution:** Keep fairness and DOT-convenience research blocks open
-until candidate families can report named tradeoff weights.
+**Structural solution:** Keep the authority-boundary contract plus fairness and
+DOT-convenience research blocks open until candidate families can report named
+tradeoff weights.
 
-**Evidence:** `research/RESEARCH.md`, `research/TRACKING.md`,
+**Evidence:** `docs/authority-boundaries.v1.json`, `research/RESEARCH.md`, `research/TRACKING.md`,
 `docs/research/fairness-principles.md`, and
 `docs/research/federal-time-authority.md`.
 

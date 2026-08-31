@@ -1,0 +1,80 @@
+{
+  "schema": "zones.authority-boundaries.v1",
+  "repo": "ZONES",
+  "purpose": "Keep ZONES candidate scores, source-derived seeds, solar-error metrics, map packets, and adoption material from becoming time-zone recommendations, national baselines, or whole-policy objectives without the required civic evidence and reviews.",
+  "pitfalls": [
+    {
+      "id": "ZONES-PF-01",
+      "status": "mitigated",
+      "boundary": "Candidate scores, map packets, comparison tables, moved-population metrics, and generated packet indexes are measurement evidence only while the recommendation gate is closed; they are not preferred, best, ready-to-adopt, or public-policy advice.",
+      "not_authorized": [
+        "time_zone_recommendation",
+        "preferred_plan_claim",
+        "best_plan_claim",
+        "ready_to_adopt_claim",
+        "public_policy_advice",
+        "legal_authority_claim",
+        "operational_scheduling_advice"
+      ],
+      "required_before_upgrade": [
+        "civil_time_policy_review",
+        "source_review",
+        "optimization_review",
+        "public_map_review",
+        "legal_authority_review",
+        "recommendation_gate_opened"
+      ]
+    },
+    {
+      "id": "ZONES-PF-02",
+      "status": "mitigated",
+      "boundary": "The four-county source-derived seed, boundary-backed local maps, and exploratory national visual packets are smoke or visual-inspection evidence only; they are not a national current-law baseline, legal-assignment scorecard, or complete source-ready dataset.",
+      "not_authorized": [
+        "national_current_law_baseline",
+        "legal_assignment_scorecard",
+        "complete_county_context_coverage",
+        "complete_source_ready_dataset",
+        "population_weighted_national_scorecard",
+        "publication_ready_map"
+      ],
+      "required_before_upgrade": [
+        "national_county_context",
+        "complete_legal_assignments",
+        "population_weighted_scores",
+        "source_gate_pass",
+        "geometry_reconciliation_pass",
+        "boundary_data_steward_review"
+      ]
+    },
+    {
+      "id": "ZONES-PF-03",
+      "status": "mitigated",
+      "boundary": "Solar-time fit is one measurement axis; candidate comparisons must keep convenience of commerce, disruption, public preference, legal process, implementation cost, source completeness, and review status visible.",
+      "not_authorized": [
+        "solar_error_only_policy_objective",
+        "fairness_claim_from_solar_fit_only",
+        "better_plan_claim_without_tradeoffs",
+        "dot_convenience_claim",
+        "implementation_ready_claim",
+        "public_preference_claim"
+      ],
+      "must_remain_visible": [
+        "convenience_of_commerce",
+        "disruption",
+        "public_preference",
+        "legal_process",
+        "implementation_cost",
+        "source_completeness",
+        "review_status"
+      ],
+      "required_before_upgrade": [
+        "dot_convenience_proxy_schema",
+        "tradeoff_weights",
+        "implementation_cost_evidence",
+        "public_preference_evidence",
+        "civil_time_policy_review",
+        "public_map_review"
+      ]
+    }
+  ]
+}
