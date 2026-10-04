@@ -1,0 +1,2 @@
+import init,{compare_json} from './pkg/zones_web.js';
+self.onmessage=async({data})=>{try{if(data.type==='init'){await init();self.postMessage({type:'ready'});}else{const started=performance.now();const result=JSON.parse(compare_json(JSON.stringify(data.assignment),data.west,data.east,data.daylight));self.postMessage({type:'result',id:data.id,result,ms:performance.now()-started});}}catch(e){self.postMessage({type:'error',id:data.id,message:String(e)});}};

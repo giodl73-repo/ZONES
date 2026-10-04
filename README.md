@@ -34,6 +34,14 @@ service promises where meaningful, adversarial review, and acceptance of a
 rigorous null result. Each repository owns its domain semantics and safety
 boundary.
 
+## Browser clock experiment
+
+[Try the clock workbench](https://giodl73-repo.github.io/ZONES/): adjust UTC
+offsets, daylight shift, and four synthetic unit assignments. Native Rust/WASM
+returns solar error, connectivity, moved population, and downloadable results.
+The fixture is synthetic and does not represent law or a recommended policy.
+See [browser architecture](docs/browser-explorer.md).
+
 ## Use ZONES
 
 ZONES is public and open to use as a reference model, civic-boundary scoring
