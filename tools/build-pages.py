@@ -29,6 +29,7 @@ def main():
     run("wasm-bindgen", str(wasm), "--target", "web", "--out-dir", str(output / "pkg"))
     for name in ("index.html", "style.css", "app.js", "worker.js"):
         shutil.copy2(ROOT / "web" / name, output / name)
+    shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
     (output / ".nojekyll").touch()
     size = sum(path.stat().st_size for path in output.rglob("*") if path.is_file())
     if size >= 5_000_000:
