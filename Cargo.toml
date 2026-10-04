@@ -2,6 +2,7 @@
 members = [
     "crates/zones-core",
     "crates/zones-cli",
+    "crates/zones-web",
 ]
 resolver = "2"
 
