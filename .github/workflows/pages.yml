@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,12 +21,17 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Install tools
+      - name: Install pinned tools
+        timeout-minutes: 5
         run: |
           rustup show
-          cargo install wasm-bindgen-cli --version 0.2.127 --locked
-          npm ci
-          npx playwright install --with-deps chromium
+          mkdir -p .cache/bindgen
+          curl --fail --location --retry 2 --max-time 60 https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.127/wasm-bindgen-0.2.127-x86_64-unknown-linux-musl.tar.gz -o .cache/bindgen.tar.gz
+          echo '61d4a7dc85acfa0d2354ccc0b8361928c7e52a746d17f28ebaa795ed3dc1614a  .cache/bindgen.tar.gz' | sha256sum --check
+          tar -xzf .cache/bindgen.tar.gz -C .cache/bindgen --strip-components=1
+          echo "$PWD/.cache/bindgen" >> "$GITHUB_PATH"
+          npm ci --fetch-retries=1 --fetch-timeout=60000
+          npx playwright install chromium
       - name: Validate Rust
         run: |
           cargo fmt -p zones-web --check
@@ -42,7 +47,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
