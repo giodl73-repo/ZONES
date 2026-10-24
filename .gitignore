@@ -5,3 +5,6 @@ target/
 /dist/
 /node_modules/
 /test-results/
+
+# Checksum-verified local/CI binding-generator downloads
+/.cache/

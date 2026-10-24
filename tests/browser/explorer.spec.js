@@ -7,7 +7,7 @@ test('actual WASM evaluates clock changes, connectivity and shared settings',asy
  await page.getByRole('button',{name:'Share experiment'}).click();await page.reload();await expect(page.locator('#verdict')).toHaveText('Disconnected zones');
  const download=page.waitForEvent('download');await page.locator('#export').click();expect((await download).suggestedFilename()).toBe('zones-synthetic-comparison.json');
  await page.locator('#reset').click();await expect(page.locator('#error')).toHaveText('6.62');await expect(page.locator('#taxlane')).toHaveAttribute('href','https://giodl73-repo.github.io/TAXLANE/#evidence-community-regional-development');
- const provenance=await (await page.request.get('/ZONES/provenance.json')).json();expect(provenance.commit).toMatch(/^[0-9a-f]{40}$/);expect((await page.request.get('/ZONES/THIRD-PARTY-LICENSES.txt')).ok()).toBe(true);
+ const provenance=await (await page.request.get('/ZONES/provenance.json')).json();expect(provenance.commit).toMatch(/^[0-9a-f]{40}$/);expect(provenance.dirty).toBe(false);expect((await page.request.get('/ZONES/THIRD-PARTY-LICENSES.txt')).ok()).toBe(true);
  expect(errors).toEqual([]);
 });
 test('mobile invalid query remains bounded and engine failures readable',async({page})=>{
