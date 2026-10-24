@@ -24,3 +24,9 @@ and the original domain review gates. No critical/major actionable finding.
 Implementation exit: Python build syntax and JavaScript syntax checked; git diff
 --check passes. Hosted native checks and executing-WASM browser cases gate
 publication. TRACKER records live domain-task and release identity receipts.
+
+Live exit correction: the first artifact matched its hosted bytes but included
+untracked binding-tool downloads in its dirty-state flag. Ignore only the
+generated .cache directory and assert clean provenance in the existing browser
+case. Native/domain behavior remains unchanged; final release identity and
+roundtrip receipts are required after this correction.
