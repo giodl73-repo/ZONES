@@ -101,3 +101,12 @@ cargo run -p zones-cli -- compare-offset-candidates
 cargo run -p zones-cli -- evaluate-plan data/plan-inputs/us-county-baseline-smoke.json
 git diff --check
 ```
+
+## Browser evidence inspection
+
+The seven existing native source reports are exposed separately from the clock
+experiment. Recorded policy/reference/assignment/geometry/context checks do not
+override exploratory internal points, four-county scope or publication holds.
+No primary acquisition, current-law verification, county score/map or preferred
+plan is added. Pulse 04 candidate scoring remains in progress under its existing
+publication limits. See docs/specs/WP_WEB_002.md.

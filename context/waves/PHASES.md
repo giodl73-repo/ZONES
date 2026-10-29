@@ -17,3 +17,9 @@ Work is organized into small waves and pulses.
 6. Update docs and wave/pulse status.
 7. Run the repo validation commands.
 8. Commit when green.
+
+## Separate browser evidence wave
+
+2026-10-29-source-evidence exposes recorded native report metadata only. It
+does not advance candidate Pulse 04 or promote its county/candidate outputs.
+Contract: docs/specs/WP_WEB_002.md.

@@ -1,4 +1,5 @@
 //! Synthetic civil-time workbench; never a legal assignment or recommendation.
+pub mod evidence;
 use serde::Serialize;
 use zones_core::{
     evaluate_offset_fit, evaluate_zone_plan_input, render_offset_fit_svg,
@@ -104,4 +105,10 @@ mod tests {
         assert!(compare(&[0, 0, 1, 1], -359, -300, 0).is_err());
         assert!(compare(&[0, 0, 1, 1], -360, -300, 30).is_err());
     }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn inspect_evidence_json(input: &str) -> Result<String, wasm_bindgen::JsValue> {
+    evidence::evaluate(input).map_err(|e| wasm_bindgen::JsValue::from_str(&e))
 }
