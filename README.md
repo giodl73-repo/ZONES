@@ -313,3 +313,14 @@ non-software content is licensed CC BY-NC 4.0 (copyright Gio Della-Libera);
 commercial use of that content requires separate written permission.
 Third-party material remains under its own terms.
 See [LICENSE](./LICENSE) for the complete notice.
+
+## Recorded source-evidence inspector
+
+The [browser workbench](https://giodl73-repo.github.io/ZONES/) now includes a
+separate seven-lens inspector over the existing native source/metadata reports.
+Policy/reference coverage and recorded evidence checks stay separate from the
+false strong point-method gate and held publication/recommendation authority.
+The source-derived four-county seed is distinct from the invented clock demo.
+No county scores, maps or present-day legal assignments are published by the
+inspector. See [source scope/custody](docs/source-evidence.md) and the accepted
+[work package](docs/specs/WP_WEB_002.md).

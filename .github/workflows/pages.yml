@@ -34,9 +34,11 @@ jobs:
           npx playwright install chromium
       - name: Validate Rust
         run: |
-          cargo fmt -p zones-web --check
-          cargo test --locked --workspace
-          cargo clippy --locked --no-deps -p zones-web --all-targets --all-features -- -D warnings
+          cargo fmt --all --check
+          cargo check --locked --workspace --all-targets
+          cargo test --locked --workspace --all-targets
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+          cargo clippy --locked -p zones-web --lib --features wasm --target wasm32-unknown-unknown -- -D warnings
       - name: Build Pages and test browser
         run: |
           python tools/build-pages.py

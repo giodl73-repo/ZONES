@@ -24,3 +24,8 @@ before US county baseline claims move beyond seed-fixture status.
 The checked contract for these boundaries lives at
 `data/module-boundaries/zones-rplan-rline.json` and can be summarized with
 `zones module-boundary-report`.
+
+## Browser source evidence
+
+[WP_WEB_002.md](WP_WEB_002.md) is accepted for frozen source-evidence report
+inspection; no score/map/publication promotion.
